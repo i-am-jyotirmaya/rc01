@@ -10,6 +10,9 @@ importers:
 
   apps/app-ui:
     dependencies:
+      '@ant-design/icons':
+        specifier: ~5.6.1
+        version: 5.6.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       antd:
         specifier: ^5.27.4
         version: 5.27.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1)

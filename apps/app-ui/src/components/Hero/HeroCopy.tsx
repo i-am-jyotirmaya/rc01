@@ -2,7 +2,7 @@ import { Button, Space, Tag, Typography, theme } from "antd";
 import type { FC } from "react";
 import { useMemo } from "react";
 import type { HeroContent } from "../../features/arena/arenaSlice";
-import { IconFactory } from "../common/IconFactory";
+import { GetStartedFlow } from "../GetStarted/GetStartedFlow";
 import { StatChip } from "../common/StatChip";
 
 const { Title, Paragraph } = Typography;
@@ -90,13 +90,10 @@ export const HeroCopy: FC<HeroCopyProps> = ({ hero }) => {
       </Title>
       <Paragraph style={subtitleStyle}>{hero.subtitle}</Paragraph>
       <Space size="large" wrap>
-        <Button
-          type="primary"
-          size="large"
-          icon={<IconFactory icon={hero.actions.primary.icon} />}
-        >
-          {hero.actions.primary.label}
-        </Button>
+        <GetStartedFlow
+          label={hero.actions.primary.label}
+          icon={hero.actions.primary.icon}
+        />
         <Button size="large" ghost>
           {hero.actions.secondary.label}
         </Button>

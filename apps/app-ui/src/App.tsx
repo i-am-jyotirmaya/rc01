@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, type FC, type JSX } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import { ConfigProvider } from "antd";
+import "@/App.css";
+import { lightThemeConfig } from "@/themes/light-theme";
 
-function App() {
-  const [count, setCount] = useState(0)
+const App: FC = (): JSX.Element => {
+  const [count, setCount] = useState(0);
 
   return (
     <>
+      <ConfigProvider theme={lightThemeConfig}></ConfigProvider>
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
@@ -29,7 +32,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
-  )
-}
+  );
+};
 
-export default App
+export default App;

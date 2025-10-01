@@ -1,4 +1,6 @@
-export const lightThemeConfig = {
+import type { ThemeConfig } from "antd";
+
+export const lightThemeConfig: ThemeConfig = {
   token: {
     colorPrimary: "#fadb14",
     colorInfo: "#fadb14",

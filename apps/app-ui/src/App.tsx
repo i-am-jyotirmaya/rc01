@@ -1,7 +1,9 @@
 import { Layout, theme } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useMemo } from "react";
+import { Route, Routes } from "react-router-dom";
 import { HeroSection } from "./components/Hero/HeroSection";
+import { HostBattlePage } from "./pages/HostBattlePage";
 
 const App: FC = () => {
   const { token } = theme.useToken();
@@ -21,7 +23,10 @@ const App: FC = () => {
 
   return (
     <Layout style={layoutStyle}>
-      <HeroSection />
+      <Routes>
+        <Route path="/" element={<HeroSection />} />
+        <Route path="/host" element={<HostBattlePage />} />
+      </Routes>
     </Layout>
   );
 };

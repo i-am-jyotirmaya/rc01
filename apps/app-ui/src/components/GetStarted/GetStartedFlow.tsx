@@ -43,7 +43,7 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
       const { inviteLink } = await joinForm.validateFields();
       // TODO: Integrate with battle join endpoint once available.
       message.success(`Attempting to join with ${inviteLink}`);
-    } catch (error) {
+    } catch {
       // Ant Design surfaces validation issues inline; no additional handling required here.
     }
   }, [joinForm]);

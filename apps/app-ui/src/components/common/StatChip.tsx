@@ -2,6 +2,7 @@ import { Space, Typography, theme } from "antd";
 import type { FC } from "react";
 import { useMemo } from "react";
 import type { HeroStat } from "../../features/arena/arenaSlice";
+import { useThemeMode } from "../../providers/theme-mode-context";
 import { IconFactory } from "./IconFactory";
 
 const { Text } = Typography;
@@ -12,6 +13,7 @@ interface StatChipProps {
 
 export const StatChip: FC<StatChipProps> = ({ stat }) => {
   const { token } = theme.useToken();
+  const { mode } = useThemeMode();
 
   const containerStyle = useMemo(
     () => ({
@@ -21,10 +23,10 @@ export const StatChip: FC<StatChipProps> = ({ stat }) => {
       padding: `${token.paddingSM}px ${token.paddingLG}px`,
       borderRadius: token.borderRadiusLG,
       border: `1px solid ${token.colorPrimaryBorder}`,
-      background: "rgba(255, 255, 255, 0.04)",
+      background: mode === "dark" ? "rgba(255, 255, 255, 0.04)" : "rgba(5, 8, 20, 0.05)",
       backdropFilter: "blur(12px)",
     }),
-    [token],
+    [mode, token],
   );
 
   const iconStyle = useMemo(
@@ -41,7 +43,7 @@ export const StatChip: FC<StatChipProps> = ({ stat }) => {
       fontSize: token.fontSizeSM,
       textTransform: "uppercase" as const,
       letterSpacing: "0.08em",
-      color: "rgba(240, 245, 255, 0.6)",
+      color: token.colorTextSecondary,
     }),
     [token],
   );
@@ -50,7 +52,7 @@ export const StatChip: FC<StatChipProps> = ({ stat }) => {
     () => ({
       display: "block",
       fontSize: token.fontSizeLG,
-      color: token.colorTextLightSolid,
+      color: token.colorText,
     }),
     [token],
   );

@@ -2,6 +2,7 @@ import { Card, Col, Row, Space, Typography, theme } from "antd";
 import type { FC } from "react";
 import { useMemo } from "react";
 import type { HeroHighlight } from "../../features/arena/arenaSlice";
+import { useThemeMode } from "../../providers/theme-mode-context";
 import { IconFactory } from "../common/IconFactory";
 
 const { Text } = Typography;
@@ -12,6 +13,7 @@ interface HeroHighlightsProps {
 
 export const HeroHighlights: FC<HeroHighlightsProps> = ({ highlights }) => {
   const { token } = theme.useToken();
+  const { mode } = useThemeMode();
 
   const containerStyle = useMemo(
     () => ({
@@ -23,11 +25,15 @@ export const HeroHighlights: FC<HeroHighlightsProps> = ({ highlights }) => {
   const cardStyle = useMemo(
     () => ({
       borderRadius: token.borderRadiusLG,
-      background: "rgba(5, 8, 20, 0.92)",
-      border: "1px solid rgba(255, 255, 255, 0.08)",
+      background: token.colorBgElevated,
+      border: `1px solid ${token.colorBorderSecondary}`,
+      boxShadow:
+        mode === "dark"
+          ? "0 18px 40px rgba(5, 8, 20, 0.45)"
+          : "0 18px 40px rgba(15, 23, 42, 0.12)",
       height: "100%",
     }),
-    [token],
+    [mode, token],
   );
 
   const cardBodyStyle = useMemo(
@@ -49,7 +55,7 @@ export const HeroHighlights: FC<HeroHighlightsProps> = ({ highlights }) => {
     () => ({
       display: "block",
       fontWeight: 600,
-      color: token.colorTextLightSolid,
+      color: token.colorText,
     }),
     [token],
   );
@@ -57,7 +63,7 @@ export const HeroHighlights: FC<HeroHighlightsProps> = ({ highlights }) => {
   const descriptionStyle = useMemo(
     () => ({
       display: "block",
-      color: "rgba(240, 245, 255, 0.65)",
+      color: token.colorTextSecondary,
       fontSize: token.fontSizeSM,
     }),
     [token],

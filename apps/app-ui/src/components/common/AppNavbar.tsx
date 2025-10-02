@@ -1,8 +1,10 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Layout, theme } from "antd";
+import { Button, Layout, Space, theme } from "antd";
 import type { CSSProperties, FC } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { openLoginModal } from "../../features/auth/authSlice";
+import { useAppDispatch } from "../../store/hooks";
 import { ThemeToggle } from "./ThemeToggle";
 
 const { Header } = Layout;
@@ -10,6 +12,7 @@ const { Header } = Layout;
 export const AppNavbar: FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const { token } = theme.useToken();
 
   const showBackButton = location.pathname !== "/";
@@ -38,6 +41,10 @@ export const AppNavbar: FC = () => {
     [token.colorWarning],
   );
 
+  const handleLoginClick = useCallback(() => {
+    dispatch(openLoginModal());
+  }, [dispatch]);
+
   return (
     <Header style={headerStyle}>
       <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
@@ -52,7 +59,12 @@ export const AppNavbar: FC = () => {
           </Button>
         ) : null}
       </div>
-      <ThemeToggle />
+      <Space size="middle" align="center">
+        <Button type="default" onClick={handleLoginClick}>
+          Log in
+        </Button>
+        <ThemeToggle />
+      </Space>
     </Header>
   );
 };

@@ -5,5 +5,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "client:dev": "pnpm --filter app-ui run dev"
+  },
   "packageManager": "pnpm@10.17.1"
 }

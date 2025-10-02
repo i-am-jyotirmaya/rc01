@@ -1,6 +1,4 @@
-import { ArrowLeftOutlined } from "@ant-design/icons";
 import {
-  Button,
   ConfigProvider,
   Divider,
   Form,
@@ -16,16 +14,160 @@ import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HostBattleForm } from "../components/GetStarted/HostBattleForm";
 import type { HostBattleFormValues } from "../components/GetStarted/HostBattleForm";
+import { useThemeMode } from "../providers/theme-mode-context";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
+
+interface HostBattlePalette {
+  backgroundGradients: string[];
+  summaryBackground: string;
+  summaryBorderColor: string;
+  summaryShadow: string;
+  highlightListColor: string;
+  panelBackground: string;
+  panelBorderColor: string;
+  panelShadow: string;
+  tagBorderColor: string;
+  tagBackground: string;
+  tagTextColor: string;
+  controlTextColor: string;
+  controlBackground: string;
+  controlBorderColor: string;
+  controlBorderHoverColor: string;
+  controlOutlineColor: string;
+  controlPlaceholderColor: string;
+  controlArrowColor: string;
+  checkboxTextColor: string;
+  radioInactiveBackground: string;
+  radioInactiveTextColor: string;
+  radioShadow: string;
+  switchBackground: string;
+  switchCheckedBackground: string;
+  primaryButtonShadow: string;
+  dropdownBackground: string;
+  dropdownBorderColor: string;
+  dropdownShadow: string;
+  dropdownTextColor: string;
+  dropdownActiveBackground: string;
+  dropdownActiveTextColor: string;
+  dropdownSelectedBackground: string;
+  dropdownSelectedTextColor: string;
+  headingColor: string;
+  bodyTextColor: string;
+  paragraphMutedColor: string;
+  linkHintColor: string;
+  dividerColor: string;
+  labelColor: string;
+  optionalLabelColor: string;
+}
 
 export const HostBattlePage: FC = () => {
   const [form] = Form.useForm<HostBattleFormValues>();
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const navigate = useNavigate();
   const { token } = theme.useToken();
+  const { mode } = useThemeMode();
   const accentColor = token.colorWarning;
+  const isDark = mode === "dark";
+
+  const palette = useMemo<HostBattlePalette>(
+    () =>
+      isDark
+        ? {
+            backgroundGradients: [
+              "radial-gradient(900px circle at 10% 20%, rgba(250, 219, 20, 0.16), transparent 60%)",
+              "radial-gradient(720px circle at 85% 15%, rgba(83, 86, 255, 0.18), transparent 65%)",
+              "linear-gradient(160deg, rgba(8, 13, 34, 0.95), rgba(5, 8, 20, 0.98))",
+            ],
+            summaryBackground: "rgba(12, 18, 40, 0.78)",
+            summaryBorderColor: `${accentColor}29`,
+            summaryShadow: "0 30px 70px rgba(4, 8, 20, 0.4)",
+            highlightListColor: "rgba(240, 245, 255, 0.82)",
+            panelBackground: "rgba(6, 12, 32, 0.92)",
+            panelBorderColor: `${accentColor}33`,
+            panelShadow: "0 30px 80px rgba(3, 6, 18, 0.55)",
+            tagBorderColor: `${accentColor}66`,
+            tagBackground: `${accentColor}22`,
+            tagTextColor: "rgba(240, 245, 255, 0.9)",
+            controlTextColor: "rgba(240, 245, 255, 0.95)",
+            controlBackground: "rgba(15, 22, 46, 0.65)",
+            controlBorderColor: `${accentColor}33`,
+            controlBorderHoverColor: `${accentColor}AA`,
+            controlOutlineColor: `${accentColor}AA`,
+            controlPlaceholderColor: "rgba(240, 245, 255, 0.45)",
+            controlArrowColor: "rgba(240, 245, 255, 0.75)",
+            checkboxTextColor: "rgba(240, 245, 255, 0.85)",
+            radioInactiveBackground: "rgba(15, 22, 46, 0.6)",
+            radioInactiveTextColor: "rgba(240, 245, 255, 0.85)",
+            radioShadow: "0 12px 32px rgba(250, 219, 20, 0.32)",
+            switchBackground: `${accentColor}33`,
+            switchCheckedBackground: accentColor,
+            primaryButtonShadow: "0 18px 40px rgba(250, 219, 20, 0.25)",
+            dropdownBackground: "rgba(8, 13, 34, 0.96)",
+            dropdownBorderColor: `${accentColor}33`,
+            dropdownShadow: "0 24px 80px rgba(3, 6, 18, 0.6)",
+            dropdownTextColor: "rgba(240, 245, 255, 0.88)",
+            dropdownActiveBackground: `${accentColor}26`,
+            dropdownActiveTextColor: "rgba(240, 245, 255, 0.95)",
+            dropdownSelectedBackground: accentColor,
+            dropdownSelectedTextColor: "#050814",
+            headingColor: token.colorWhite,
+            bodyTextColor: "rgba(240, 245, 255, 0.78)",
+            paragraphMutedColor: "rgba(240, 245, 255, 0.68)",
+            linkHintColor: "rgba(240, 245, 255, 0.65)",
+            dividerColor: `${accentColor}33`,
+            labelColor: "rgba(240, 245, 255, 0.92)",
+            optionalLabelColor: "rgba(240, 245, 255, 0.6)",
+          }
+        : {
+            backgroundGradients: [
+              "radial-gradient(900px circle at 12% 20%, rgba(250, 219, 20, 0.32), transparent 60%)",
+              "radial-gradient(720px circle at 82% 18%, rgba(106, 114, 255, 0.2), transparent 65%)",
+              "linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.98))",
+            ],
+            summaryBackground: "rgba(255, 255, 255, 0.92)",
+            summaryBorderColor: "rgba(15, 23, 42, 0.08)",
+            summaryShadow: "0 28px 56px rgba(15, 23, 42, 0.12)",
+            highlightListColor: "rgba(36, 52, 93, 0.82)",
+            panelBackground: "rgba(255, 255, 255, 0.96)",
+            panelBorderColor: "rgba(15, 23, 42, 0.08)",
+            panelShadow: "0 32px 60px rgba(15, 23, 42, 0.14)",
+            tagBorderColor: "rgba(250, 219, 20, 0.3)",
+            tagBackground: "rgba(250, 219, 20, 0.12)",
+            tagTextColor: "rgba(23, 30, 54, 0.9)",
+            controlTextColor: "rgba(23, 30, 54, 0.92)",
+            controlBackground: "rgba(250, 252, 255, 0.95)",
+            controlBorderColor: "rgba(15, 23, 42, 0.12)",
+            controlBorderHoverColor: `${accentColor}80`,
+            controlOutlineColor: `${accentColor}80`,
+            controlPlaceholderColor: "rgba(71, 85, 134, 0.55)",
+            controlArrowColor: "rgba(36, 52, 93, 0.55)",
+            checkboxTextColor: "rgba(36, 52, 93, 0.82)",
+            radioInactiveBackground: "rgba(245, 248, 255, 0.9)",
+            radioInactiveTextColor: "rgba(36, 52, 93, 0.85)",
+            radioShadow: "0 12px 30px rgba(250, 219, 20, 0.2)",
+            switchBackground: `${accentColor}33`,
+            switchCheckedBackground: accentColor,
+            primaryButtonShadow: "0 18px 32px rgba(250, 219, 20, 0.2)",
+            dropdownBackground: "rgba(255, 255, 255, 0.98)",
+            dropdownBorderColor: "rgba(15, 23, 42, 0.08)",
+            dropdownShadow: "0 24px 60px rgba(15, 23, 42, 0.18)",
+            dropdownTextColor: "rgba(36, 52, 93, 0.88)",
+            dropdownActiveBackground: `${accentColor}26`,
+            dropdownActiveTextColor: "rgba(36, 52, 93, 0.88)",
+            dropdownSelectedBackground: accentColor,
+            dropdownSelectedTextColor: "#050814",
+            headingColor: token.colorTextHeading,
+            bodyTextColor: "rgba(36, 52, 93, 0.85)",
+            paragraphMutedColor: "rgba(57, 72, 112, 0.72)",
+            linkHintColor: "rgba(60, 75, 120, 0.7)",
+            dividerColor: "rgba(15, 23, 42, 0.08)",
+            labelColor: "rgba(36, 52, 93, 0.9)",
+            optionalLabelColor: "rgba(71, 85, 134, 0.6)",
+          },
+    [accentColor, isDark, token.colorTextHeading, token.colorWhite],
+  );
 
   const contentStyle = useMemo<CSSProperties>(
     () => ({
@@ -42,14 +184,10 @@ export const HostBattlePage: FC = () => {
     () => ({
       position: "absolute",
       inset: 0,
-      background: [
-        "radial-gradient(900px circle at 10% 20%, rgba(250, 219, 20, 0.16), transparent 60%)",
-        "radial-gradient(720px circle at 85% 15%, rgba(83, 86, 255, 0.18), transparent 65%)",
-        "linear-gradient(160deg, rgba(8, 13, 34, 0.95), rgba(5, 8, 20, 0.98))",
-      ].join(","),
+      background: palette.backgroundGradients.join(","),
       pointerEvents: "none",
     }),
-    [],
+    [palette],
   );
 
   const innerContainerStyle = useMemo<CSSProperties>(
@@ -87,9 +225,9 @@ export const HostBattlePage: FC = () => {
 
   const summaryCardStyle = useMemo<CSSProperties>(
     () => ({
-      background: "rgba(12, 18, 40, 0.78)",
-      border: `1px solid ${accentColor}29`,
-      boxShadow: "0 30px 70px rgba(4, 8, 20, 0.4)",
+      background: palette.summaryBackground,
+      border: `1px solid ${palette.summaryBorderColor}`,
+      boxShadow: palette.summaryShadow,
       backdropFilter: "blur(18px)",
       borderRadius: 24,
       padding: "clamp(24px, 4vw, 36px)",
@@ -97,75 +235,76 @@ export const HostBattlePage: FC = () => {
       flexDirection: "column",
       gap: token.marginMD,
     }),
-    [accentColor, token.marginMD],
+    [palette, token.marginMD],
   );
 
   const highlightListStyle = useMemo<CSSProperties>(
     () => ({
       margin: 0,
       paddingLeft: "1.2rem",
-      color: "rgba(240, 245, 255, 0.82)",
+      color: palette.highlightListColor,
       display: "flex",
       flexDirection: "column",
       gap: token.marginSM,
       listStyle: "disc",
     }),
-    [token.marginSM],
+    [palette, token.marginSM],
   );
 
   const formPanelStyle = useMemo<CSSProperties>(
     () => ({
-      background: "rgba(6, 12, 32, 0.92)",
-      border: `1px solid ${accentColor}33`,
-      boxShadow: "0 30px 80px rgba(3, 6, 18, 0.55)",
+      background: palette.panelBackground,
+      border: `1px solid ${palette.panelBorderColor}`,
+      boxShadow: palette.panelShadow,
       borderRadius: 24,
       padding: "clamp(24px, 4vw, 40px)",
     }),
-    [accentColor],
+    [palette],
   );
 
   const tagStyle = useMemo<CSSProperties>(
     () => ({
-      border: `1px solid ${accentColor}66`,
-      background: `${accentColor}22`,
-      color: "rgba(240, 245, 255, 0.9)",
+      border: `1px solid ${palette.tagBorderColor}`,
+      background: palette.tagBackground,
+      color: palette.tagTextColor,
       fontWeight: 600,
       textTransform: "uppercase",
       letterSpacing: "0.06em",
     }),
-    [accentColor],
+    [palette],
   );
+
   const formTheme = useMemo(
     () => ({
       token: {
-        colorText: token.colorTextLightSolid,
-        colorBgElevated: "rgba(10, 16, 36, 0.95)",
-        colorBgContainer: "rgba(15, 22, 46, 0.65)",
-        colorBorder: `${accentColor}33`,
-        controlOutline: `${accentColor}AA`,
+        colorText: palette.controlTextColor,
+        colorBgElevated: palette.panelBackground,
+        colorBgContainer: palette.controlBackground,
+        colorBorder: palette.controlBorderColor,
+        controlOutline: palette.controlOutlineColor,
       },
       components: {
         Select: {
-          colorBgContainer: "rgba(15, 22, 46, 0.65)",
-          colorBgElevated: "rgba(10, 16, 36, 0.95)",
-          optionSelectedBg: accentColor,
-          optionSelectedColor: "#050814",
-          optionActiveBg: `${accentColor}26`,
-          controlItemBgActive: `${accentColor}26`,
-          colorText: token.colorTextLightSolid,
+          colorBgContainer: palette.controlBackground,
+          colorBgElevated: palette.panelBackground,
+          optionSelectedBg: palette.dropdownSelectedBackground,
+          optionSelectedColor: palette.dropdownSelectedTextColor,
+          optionActiveBg: palette.dropdownActiveBackground,
+          controlItemBgActive: palette.dropdownActiveBackground,
+          colorText: palette.controlTextColor,
         },
         Input: {
-          colorBgContainer: "rgba(15, 22, 46, 0.65)",
+          colorBgContainer: palette.controlBackground,
         },
         InputNumber: {
-          colorBgContainer: "rgba(15, 22, 46, 0.65)",
+          colorBgContainer: palette.controlBackground,
         },
         Radio: {
           buttonSolidCheckedBg: accentColor,
           buttonSolidCheckedActiveBg: accentColor,
           buttonSolidCheckedHoverBg: accentColor,
-          buttonBg: "rgba(15, 22, 46, 0.6)",
-          colorText: token.colorTextLightSolid,
+          buttonBg: palette.radioInactiveBackground,
+          colorText: palette.radioInactiveTextColor,
         },
         Switch: {
           colorPrimary: accentColor,
@@ -174,23 +313,23 @@ export const HostBattlePage: FC = () => {
           colorPrimary: accentColor,
         },
         Form: {
-          labelColor: "rgba(240, 245, 255, 0.92)",
+          labelColor: palette.labelColor,
         },
       },
     }),
-    [accentColor, token.colorTextLightSolid],
+    [accentColor, palette],
   );
 
   const formEnhancementStyles = useMemo(
     () => `
       .host-battle-panel .ant-form-item-label > label {
-        color: rgba(240, 245, 255, 0.92) !important;
+        color: ${palette.labelColor} !important;
         font-weight: 600;
         letter-spacing: 0.01em;
       }
       .host-battle-panel .ant-form-item-label > label .ant-form-item-optional,
       .host-battle-panel .ant-form-item-optional {
-        color: rgba(240, 245, 255, 0.6) !important;
+        color: ${palette.optionalLabelColor} !important;
       }
       .host-battle-panel .ant-input,
       .host-battle-panel .ant-input-affix-wrapper,
@@ -199,48 +338,48 @@ export const HostBattlePage: FC = () => {
       .host-battle-panel .ant-select-selection-placeholder,
       .host-battle-panel .ant-input-number,
       .host-battle-panel .ant-input-number-input {
-        background: rgba(15, 22, 46, 0.65) !important;
-        border-color: ${accentColor}33 !important;
-        color: rgba(240, 245, 255, 0.95) !important;
+        background: ${palette.controlBackground} !important;
+        border-color: ${palette.controlBorderColor} !important;
+        color: ${palette.controlTextColor} !important;
       }
       .host-battle-panel .ant-input:hover,
       .host-battle-panel .ant-input-affix-wrapper:hover,
       .host-battle-panel .ant-select-selector:hover,
       .host-battle-panel .ant-input-number:hover {
-        border-color: ${accentColor}AA !important;
+        border-color: ${palette.controlBorderHoverColor} !important;
       }
       .host-battle-panel .ant-input::placeholder,
       .host-battle-panel .ant-input-number-input::placeholder {
-        color: rgba(240, 245, 255, 0.45) !important;
+        color: ${palette.controlPlaceholderColor} !important;
       }
       .host-battle-panel .ant-select-selection-placeholder {
-        color: rgba(240, 245, 255, 0.5) !important;
+        color: ${palette.controlPlaceholderColor} !important;
       }
       .host-battle-panel .ant-select-arrow,
       .host-battle-panel .ant-picker-suffix {
-        color: rgba(240, 245, 255, 0.75) !important;
+        color: ${palette.controlArrowColor} !important;
       }
       .host-battle-panel .ant-radio-button-wrapper {
-        background: rgba(15, 22, 46, 0.6) !important;
-        color: rgba(240, 245, 255, 0.85) !important;
-        border-color: ${accentColor}33 !important;
+        background: ${palette.radioInactiveBackground} !important;
+        color: ${palette.radioInactiveTextColor} !important;
+        border-color: ${palette.controlBorderColor} !important;
       }
       .host-battle-panel .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked):hover {
-        border-color: ${accentColor}AA !important;
+        border-color: ${palette.controlBorderHoverColor} !important;
         color: ${accentColor} !important;
       }
       .host-battle-panel .ant-radio-button-wrapper-checked {
         background: ${accentColor} !important;
         color: #050814 !important;
         border-color: ${accentColor} !important;
-        box-shadow: 0 12px 32px rgba(250, 219, 20, 0.32);
+        box-shadow: ${palette.radioShadow};
       }
       .host-battle-panel .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before {
         background-color: ${accentColor} !important;
       }
       .host-battle-panel .ant-radio-inner,
       .host-battle-panel .ant-checkbox-inner {
-        border-color: ${accentColor}88 !important;
+        border-color: ${palette.controlBorderColor} !important;
       }
       .host-battle-panel .ant-radio-checked .ant-radio-inner {
         border-color: ${accentColor} !important;
@@ -250,42 +389,42 @@ export const HostBattlePage: FC = () => {
       }
       .host-battle-panel .ant-checkbox-wrapper,
       .host-battle-panel .ant-checkbox + span {
-        color: rgba(240, 245, 255, 0.85) !important;
+        color: ${palette.checkboxTextColor} !important;
       }
       .host-battle-panel .ant-checkbox-checked .ant-checkbox-inner {
         background-color: ${accentColor} !important;
         border-color: ${accentColor} !important;
       }
       .host-battle-panel .ant-switch {
-        background: ${accentColor}33 !important;
+        background: ${palette.switchBackground} !important;
       }
       .host-battle-panel .ant-switch.ant-switch-checked {
-        background: ${accentColor} !important;
+        background: ${palette.switchCheckedBackground} !important;
       }
       .host-battle-panel .ant-form-item-required::before {
         color: ${accentColor} !important;
       }
       .host-battle-panel .ant-btn-primary {
-        box-shadow: 0 18px 40px rgba(250, 219, 20, 0.25);
+        box-shadow: ${palette.primaryButtonShadow};
       }
       .host-battle-select-dropdown {
-        background: rgba(8, 13, 34, 0.96) !important;
-        border: 1px solid ${accentColor}33 !important;
-        box-shadow: 0 24px 80px rgba(3, 6, 18, 0.6) !important;
+        background: ${palette.dropdownBackground} !important;
+        border: 1px solid ${palette.dropdownBorderColor} !important;
+        box-shadow: ${palette.dropdownShadow} !important;
       }
       .host-battle-select-dropdown .ant-select-item {
-        color: rgba(240, 245, 255, 0.88) !important;
+        color: ${palette.dropdownTextColor} !important;
       }
       .host-battle-select-dropdown .ant-select-item-option-active {
-        background: ${accentColor}26 !important;
-        color: rgba(240, 245, 255, 0.95) !important;
+        background: ${palette.dropdownActiveBackground} !important;
+        color: ${palette.dropdownActiveTextColor} !important;
       }
       .host-battle-select-dropdown .ant-select-item-option-selected {
-        background: ${accentColor} !important;
-        color: #050814 !important;
+        background: ${palette.dropdownSelectedBackground} !important;
+        color: ${palette.dropdownSelectedTextColor} !important;
       }
     `,
-    [accentColor],
+    [accentColor, palette],
   );
 
   const handleSubmit = useCallback(
@@ -302,33 +441,25 @@ export const HostBattlePage: FC = () => {
     <Content style={contentStyle}>
       <div style={backgroundLayerStyle} />
       <div style={innerContainerStyle}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ alignSelf: "flex-start", padding: 0, color: accentColor, fontWeight: 600 }}
-        >
-          Back
-        </Button>
         <div style={headerStyle}>
-          <Title level={2} style={{ margin: 0, color: token.colorWhite }}>
+          <Title level={2} style={{ margin: 0, color: palette.headingColor }}>
             Host your own battle
           </Title>
-          <Paragraph style={{ margin: 0, color: "rgba(240, 245, 255, 0.85)" }}>
-            Configure the rules, invite your competitors, and tailor the experience before you go live.
-            Everything updates instantly so you can share the lobby the moment it feels ready.
+          <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
+            Configure the rules, invite your competitors, and tailor the experience before you go live. Everything updates
+            instantly so you can share the lobby the moment it feels ready.
           </Paragraph>
-          <Text style={{ color: "rgba(240, 245, 255, 0.65)" }}>
+          <Text style={{ color: palette.linkHintColor }}>
             Prefer to join an existing competition? <Link to="/" style={{ color: accentColor }}>Return to the lobby</Link>
             to paste an invite link or code.
           </Text>
         </div>
         <div style={gridStyle}>
           <div style={summaryCardStyle}>
-            <Title level={4} style={{ margin: 0, color: token.colorWhite }}>
+            <Title level={4} style={{ margin: 0, color: palette.headingColor }}>
               Battle blueprint
             </Title>
-            <Paragraph style={{ margin: 0, color: "rgba(240, 245, 255, 0.78)" }}>
+            <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
               Outline your format, scheduling, and moderation in one pass. You can revisit this setup any time before the
               battle starts.
             </Paragraph>
@@ -337,20 +468,18 @@ export const HostBattlePage: FC = () => {
               <Tag style={tagStyle}>Private or public</Tag>
               <Tag style={tagStyle}>Power-up pools</Tag>
             </Space>
-            <Divider style={{ margin: `${token.marginMD}px 0`, borderColor: `${accentColor}33` }} />
-            <Paragraph strong style={{ margin: 0, color: token.colorWhite }}>Setup checklist</Paragraph>
+            <Divider style={{ margin: `${token.marginMD}px 0`, borderColor: palette.dividerColor }} />
+            <Paragraph strong style={{ margin: 0, color: palette.headingColor }}>Setup checklist</Paragraph>
             <ul style={highlightListStyle}>
               <li>Pick battle modes, difficulty, and player limits that match your format.</li>
               <li>Lock down privacy, queue sizing, and moderation so teams join smoothly.</li>
               <li>Enable advanced scoring, power-ups, and resources when you want extra spectacle.</li>
             </ul>
-            <Paragraph style={{ margin: 0, color: "rgba(240, 245, 255, 0.68)" }}>
+            <Paragraph style={{ margin: 0, color: palette.paragraphMutedColor }}>
               Need inspiration? <Text style={{ color: accentColor }}>Community templates</Text> are dropping soon.
             </Paragraph>
           </div>
-          <ConfigProvider
-            theme={formTheme}
-          >
+          <ConfigProvider theme={formTheme}>
             <div className="host-battle-panel" style={formPanelStyle}>
               <style>{formEnhancementStyles}</style>
               <HostBattleForm
@@ -366,9 +495,3 @@ export const HostBattlePage: FC = () => {
     </Content>
   );
 };
-
-
-
-
-
-

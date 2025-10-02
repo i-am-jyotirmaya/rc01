@@ -1,10 +1,9 @@
 import { Form, Input, Modal, Space, Typography, Button, message, theme } from "antd";
 import type { FC } from "react";
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { HeroIconKey } from "../../features/arena/arenaSlice";
 import { IconFactory } from "../common/IconFactory";
-import { HostBattleForm } from "./HostBattleForm";
-import type { HostBattleFormValues } from "./HostBattleForm";
 
 interface GetStartedFlowProps {
   label: string;
@@ -15,10 +14,8 @@ const inviteLinkPattern = /^(https?:\/\/\S+|[A-Z0-9-]{6,})$/i;
 
 export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isHosting, setIsHosting] = useState(false);
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [joinForm] = Form.useForm<{ inviteLink: string }>();
-  const [hostForm] = Form.useForm<HostBattleFormValues>();
+  const navigate = useNavigate();
   const { token } = theme.useToken();
 
   const helperTextStyle = useMemo(
@@ -30,38 +27,23 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
   );
 
   const closeModal = useCallback(() => {
-    // Reset modal state so each launch starts with a clean slate.
     setIsModalOpen(false);
-    setIsHosting(false);
-    setShowAdvancedOptions(false);
     joinForm.resetFields();
-    hostForm.resetFields();
-  }, [hostForm, joinForm]);
+  }, [joinForm]);
 
   const handleJoin = useCallback(async () => {
     try {
       const { inviteLink } = await joinForm.validateFields();
-      // TODO: Integrate with battle join endpoint once available.
       message.success(`Attempting to join with ${inviteLink}`);
     } catch {
       // Ant Design surfaces validation issues inline; no additional handling required here.
     }
   }, [joinForm]);
 
-  const handleHostSubmit = useCallback(
-    async (values: HostBattleFormValues) => {
-      // TODO: Replace mock handling with create-battle mutation.
-      message.success(`Battle "${values.battleName}" configured`);
-      closeModal();
-    },
-    [closeModal],
-  );
-
-  const handleHostAction = useCallback(() => {
-    setIsHosting(true);
-    // Ensures advanced options reset whenever the host flow re-opens.
-    setShowAdvancedOptions(false);
-  }, []);
+  const handleHostNavigate = useCallback(() => {
+    closeModal();
+    navigate("/host");
+  }, [closeModal, navigate]);
 
   return (
     <>
@@ -108,24 +90,13 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
           <Typography.Text style={helperTextStyle}>
             Accepts secure https links or invite codes (e.g. BTL-9821, TEAM-01).
           </Typography.Text>
-          {!isHosting ? (
-            <Button type="default" block onClick={handleHostAction}>
-              Host your own battle
-            </Button>
-          ) : null}
-          {isHosting ? (
-            <>
-              <Typography.Text strong>Configure your battle</Typography.Text>
-              <HostBattleForm
-                form={hostForm}
-                showAdvanced={showAdvancedOptions}
-                onToggleAdvanced={setShowAdvancedOptions}
-                onSubmit={handleHostSubmit}
-              />
-            </>
-          ) : null}
+          <Button type="default" block onClick={handleHostNavigate}>
+            Host your own battle
+          </Button>
         </Space>
       </Modal>
     </>
   );
 };
+
+

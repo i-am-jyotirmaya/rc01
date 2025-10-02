@@ -1,11 +1,16 @@
 import { Layout, theme } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useMemo } from "react";
+import { Route, Routes } from "react-router-dom";
 import { HeroSection } from "./components/Hero/HeroSection";
+
 import { ThemeToggle } from "./components/common/ThemeToggle";
 import { useThemeMode } from "./providers/theme-mode-context";
 
 const { Header } = Layout;
+
+import { HostBattlePage } from "./pages/HostBattlePage";
+
 
 const App: FC = () => {
   const { token } = theme.useToken();
@@ -48,10 +53,17 @@ const App: FC = () => {
 
   return (
     <Layout style={layoutStyle}>
+
       <Header style={headerStyle}>
         <ThemeToggle />
       </Header>
       <HeroSection />
+
+      <Routes>
+        <Route path="/" element={<HeroSection />} />
+        <Route path="/host" element={<HostBattlePage />} />
+      </Routes>
+
     </Layout>
   );
 };

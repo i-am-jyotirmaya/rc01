@@ -1,0 +1,28 @@
+services:
+  app-backend:
+    build:
+      context: ../..
+      dockerfile: apps/app-backend/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-4000}:4000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./storage:/app/apps/app-backend/storage
+    restart: unless-stopped
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-codebattle}
+      POSTGRES_USER: ${DB_USER:-codebattle}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-codebattle}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

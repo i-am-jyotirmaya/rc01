@@ -34,7 +34,7 @@ This platform is built for:
 | Layer         | Tech Used                                                                                                                  |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Frontend      | [React](https://reactjs.org/), [Ant Design](https://ant.design/), TypeScript                                               |
-| Backend (WIP) | [Node.js](https://nodejs.org/), [Express](https://expressjs.com/), (future: Dockerized sandbox runners, PostgreSQL/SQLite) |
+| Backend       | [Node.js](https://nodejs.org/), [Express](https://expressjs.com/), PostgreSQL, Docker |
 | Monorepo Mgmt | [pnpm workspaces](https://pnpm.io/workspaces)                                                                              |
 | Real-time     | (Planned) WebSockets / Socket.IO                                                                                           |
 | Testing       | (Planned) Jest, React Testing Library                                                                                      |
@@ -48,15 +48,25 @@ The project is organized using `pnpm` workspaces for better separation of concer
 codebattle-arena/
 │
 ├── apps/
-│ └── frontend/
-│ └── app-ui/ # React + Ant Design SPA
+│   ├── app-ui/        # React + Ant Design SPA
+│   └── app-backend/   # Node.js authentication + orchestration API
 │
 ├── packages/
-│ └── shared/ # (Optional) Shared utils/types
-│ └── backend/ # Node.js backend (upcoming)
+│   └── db/            # Shared Postgres connector utilities
 │
 ├── package.json
 └── pnpm-workspace.yaml
+
+## 🗄️ Backend Overview
+
+The `apps/app-backend` service powers authentication and the foundational APIs for CodeBattle Arena. Key capabilities include:
+
+- Secure user registration with hashed passwords and JWT-based authentication flows.
+- PostgreSQL persistence managed through the shared `@codebattle/db` workspace package.
+- Profile photo uploads that are resized automatically and stored locally for reuse in future battle features.
+- Docker Compose configuration for spinning up the API together with a Postgres instance.
+
+Refer to [`apps/app-backend/README.md`](apps/app-backend/README.md) for setup instructions, environment details, and roadmap placeholders.
 
 ---
 
@@ -64,7 +74,7 @@ codebattle-arena/
 
 - ✅ Frontend bootstrapped with Vite + React + Ant Design
 - ✅ Basic routing and component scaffolding in place
-- 🔜 Backend integration (Node/Express)
+- ✅ Backend foundation (auth service + Postgres)
 - 🔜 Sandbox environments for secure code execution
 - 🔜 Real-time leaderboard + spectator mode
 - 🔜 Docker support for local and self-hosted deployments

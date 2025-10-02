@@ -11,7 +11,6 @@ const { Header } = Layout;
 
 import { HostBattlePage } from "./pages/HostBattlePage";
 
-
 const App: FC = () => {
   const { token } = theme.useToken();
   const { mode } = useThemeMode();
@@ -53,17 +52,14 @@ const App: FC = () => {
 
   return (
     <Layout style={layoutStyle}>
-
       <Header style={headerStyle}>
         <ThemeToggle />
       </Header>
-      <HeroSection />
 
       <Routes>
         <Route path="/" element={<HeroSection />} />
         <Route path="/host" element={<HostBattlePage />} />
       </Routes>
-
     </Layout>
   );
 };

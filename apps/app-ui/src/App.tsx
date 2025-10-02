@@ -1,7 +1,8 @@
-﻿import { Layout, theme } from "antd";
+import { Layout, theme } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useMemo } from "react";
 import { Route, Routes } from "react-router-dom";
+import { AuthModal } from "./components/auth/AuthModal";
 import { AppNavbar } from "./components/common/AppNavbar";
 import { HeroSection } from "./components/Hero/HeroSection";
 import { useThemeMode } from "./providers/theme-mode-context";
@@ -40,6 +41,7 @@ const App: FC = () => {
         <Route path="/" element={<HeroSection />} />
         <Route path="/host" element={<HostBattlePage />} />
       </Routes>
+      <AuthModal />
     </Layout>
   );
 };

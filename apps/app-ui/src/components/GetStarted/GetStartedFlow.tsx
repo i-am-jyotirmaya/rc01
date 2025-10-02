@@ -1,8 +1,9 @@
-import { Form, Input, Modal, Space, Typography, Button, message, theme } from "antd";
+import { Form, Input, Space, Typography, Button, message, theme } from "antd";
 import type { FC } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HeroIconKey } from "../../features/arena/arenaSlice";
+import { AppModal } from "../common/AppModal";
 import { IconFactory } from "../common/IconFactory";
 
 interface GetStartedFlowProps {
@@ -34,7 +35,7 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
   const handleJoin = useCallback(async () => {
     try {
       const { inviteLink } = await joinForm.validateFields();
-      message.success(`Attempting to join with ${inviteLink}`);
+      message.success("Attempting to join with " + inviteLink);
     } catch {
       // Ant Design surfaces validation issues inline; no additional handling required here.
     }
@@ -55,7 +56,7 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
       >
         {label}
       </Button>
-      <Modal
+      <AppModal
         open={isModalOpen}
         onCancel={closeModal}
         footer={null}
@@ -94,9 +95,7 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
             Host your own battle
           </Button>
         </Space>
-      </Modal>
+      </AppModal>
     </>
   );
 };
-
-

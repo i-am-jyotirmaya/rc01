@@ -2,6 +2,7 @@ import { Card, Space, Typography, theme } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useMemo } from "react";
 import type { HeroContent } from "../../features/arena/arenaSlice";
+import { useThemeMode } from "../../providers/theme-mode-context";
 import { IconFactory } from "../common/IconFactory";
 
 const { Text } = Typography;
@@ -12,6 +13,8 @@ interface HeroVisualProps {
 
 export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
   const { token } = theme.useToken();
+  const { mode } = useThemeMode();
+  const isDark = mode === "dark";
 
   const containerStyle = useMemo<CSSProperties>(
     () => ({
@@ -62,13 +65,19 @@ export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
       width: "min(420px, 90%)",
       padding: `${token.paddingXL}px`,
       borderRadius: 20,
-      border: "1px solid rgba(255, 255, 255, 0.1)",
-      background: "linear-gradient(140deg, rgba(12, 16, 36, 0.85), rgba(12, 16, 36, 0.65))",
-      boxShadow: "0 24px 60px rgba(8, 10, 25, 0.45)",
+      border: isDark
+        ? "1px solid rgba(255, 255, 255, 0.1)"
+        : "1px solid rgba(15, 23, 42, 0.08)",
+      background: isDark
+        ? "linear-gradient(140deg, rgba(12, 16, 36, 0.85), rgba(12, 16, 36, 0.65))"
+        : "linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 255, 0.75))",
+      boxShadow: isDark
+        ? "0 24px 60px rgba(8, 10, 25, 0.45)"
+        : "0 24px 60px rgba(15, 23, 42, 0.15)",
       backdropFilter: "blur(18px)",
       zIndex: 1,
     }),
-    [token],
+    [isDark, token],
   );
 
   const glassHeaderStyle = useMemo<CSSProperties>(
@@ -95,10 +104,10 @@ export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
       margin: 0,
       fontFamily: '"Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
       fontSize: "0.95rem",
-      color: "rgba(244, 248, 255, 0.9)",
+      color: isDark ? "rgba(244, 248, 255, 0.9)" : "rgba(20, 24, 36, 0.85)",
       whiteSpace: "pre-wrap" as const,
     }),
-    [],
+    [isDark],
   );
 
   const featureCardStyle = useMemo<CSSProperties>(
@@ -108,11 +117,15 @@ export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
       right: "8%",
       width: 260,
       borderRadius: token.borderRadiusLG,
-      background: "rgba(5, 8, 20, 0.92)",
-      border: "1px solid rgba(250, 219, 20, 0.2)",
-      boxShadow: "0 18px 40px rgba(5, 8, 20, 0.55)",
+      background: token.colorBgElevated,
+      border: isDark
+        ? "1px solid rgba(250, 219, 20, 0.2)"
+        : "1px solid rgba(24, 35, 58, 0.12)",
+      boxShadow: isDark
+        ? "0 18px 40px rgba(5, 8, 20, 0.55)"
+        : "0 18px 40px rgba(15, 23, 42, 0.15)",
     }),
-    [token],
+    [isDark, token],
   );
 
   const featureIconStyle = useMemo<CSSProperties>(
@@ -127,7 +140,7 @@ export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
     () => ({
       display: "block",
       fontWeight: 600,
-      color: token.colorTextLightSolid,
+      color: token.colorText,
     }),
     [token],
   );
@@ -135,7 +148,7 @@ export const HeroVisual: FC<HeroVisualProps> = ({ hero }) => {
   const featureSubtitleStyle = useMemo<CSSProperties>(
     () => ({
       display: "block",
-      color: "rgba(240, 245, 255, 0.65)",
+      color: token.colorTextSecondary,
       fontSize: token.fontSizeSM,
     }),
     [token],

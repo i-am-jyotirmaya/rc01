@@ -53,7 +53,7 @@ export const HeroCopy: FC<HeroCopyProps> = ({ hero }) => {
       fontSize: "clamp(2.8rem, 4vw, 4rem)",
       fontWeight: 800,
       letterSpacing: "0.02em",
-      color: token.colorWhite,
+      color: token.colorTextHeading,
     }),
     [token],
   );
@@ -62,9 +62,9 @@ export const HeroCopy: FC<HeroCopyProps> = ({ hero }) => {
     () => ({
       maxWidth: "32rem",
       fontSize: "1.1rem",
-      color: "rgba(240, 245, 255, 0.85)",
+      color: token.colorTextSecondary,
     }),
-    [],
+    [token],
   );
 
   const statsContainerStyle = useMemo(

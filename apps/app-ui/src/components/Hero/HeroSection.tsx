@@ -18,7 +18,7 @@ export const HeroSection: FC = () => {
       padding: "clamp(64px, 8vw, 120px) clamp(32px, 8vw, 96px)",
       position: "relative" as const,
       overflow: "hidden",
-      color: token.colorTextLightSolid,
+      color: token.colorText,
     }),
     [token],
   );

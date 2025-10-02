@@ -131,7 +131,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
       <Typography.Title level={5} style={{ marginBottom: 16 }}>
         Battle basics
       </Typography.Title>
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} align="top">
         <Col {...fieldColProps}>
           <Form.Item
             name="battleName"
@@ -150,6 +150,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
           <Form.Item name="gameMode" label="Game mode">
             <Select
               placeholder="Select a mode"
+              popupClassName="host-battle-select-dropdown"
               options={basicSelectOptions.gameModes}
               allowClear
             />
@@ -159,6 +160,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
           <Form.Item name="difficulty" label="Difficulty">
             <Select
               placeholder="Select difficulty"
+              popupClassName="host-battle-select-dropdown"
               options={basicSelectOptions.difficulty}
               allowClear
             />
@@ -209,7 +211,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
           <Typography.Title level={5} style={{ marginBottom: 0 }}>
             Advanced settings
           </Typography.Title>
-          <Row gutter={[16, 16]}>
+          <Row gutter={[16, 16]} align="top">
             <Col {...advancedColProps}>
               <Form.Item name="turnTimeLimit" label="Turn time limit (seconds)">
                 <InputNumber min={10} max={600} style={{ width: "100%" }} />
@@ -224,6 +226,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
               <Form.Item name="scoringRules" label="Scoring rules">
                 <Select
                   placeholder="Choose scoring rules"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.scoringRules}
                   allowClear
                 />
@@ -233,6 +236,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
               <Form.Item name="tieBreakPreference" label="Tie-break preference">
                 <Select
                   placeholder="Choose tie-breaker"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.tieBreaks}
                   allowClear
                 />
@@ -243,6 +247,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
                 <Select
                   mode="multiple"
                   placeholder="Select power-ups"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.powerUps}
                   allowClear
                 />
@@ -268,6 +273,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
                 <Select
                   mode="multiple"
                   placeholder="Assign moderators"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.moderatorRoles}
                   allowClear
                 />
@@ -277,6 +283,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
               <Form.Item name="preloadedResources" label="Pre-loaded resources">
                 <Select
                   placeholder="Select resources"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.resources}
                   allowClear
                 />
@@ -313,6 +320,7 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
               <Form.Item name="linkExpiry" label="Link expiry">
                 <Select
                   placeholder="Choose expiry"
+                  popupClassName="host-battle-select-dropdown"
                   options={advancedSelectOptions.linkExpiry}
                   allowClear
                 />
@@ -345,3 +353,5 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
 };
 
 export type { HostBattleFormValues };
+
+

@@ -1,0 +1,47 @@
+services:
+  app-backend:
+    build:
+      context: .
+      dockerfile: apps/app-backend/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      JWT_SECRET: change-me
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: codebattle
+      DB_PASSWORD: codebattle
+      DB_NAME: codebattle
+      STORAGE_DIR: /app/apps/app-backend/storage
+      MAX_UPLOAD_SIZE_MB: 5
+      IMAGE_MAX_WIDTH: 512
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/app-backend/storage:/app/apps/app-backend/storage
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: codebattle
+      POSTGRES_USER: codebattle
+      POSTGRES_PASSWORD: codebattle
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U codebattle -d codebattle
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

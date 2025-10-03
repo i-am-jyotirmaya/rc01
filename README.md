@@ -56,10 +56,22 @@ codebattle-arena/
 │   └── app-backend/   # Node.js authentication + orchestration API
 │
 ├── packages/
-│   └── db/            # Shared Postgres connector utilities
+│   ├── db/                    # Shared Postgres connector utilities
+│   └── file-manager-service/  # Markdown problem storage microservice
 │
 ├── package.json
 └── pnpm-workspace.yaml
+
+## 🗂️ File Manager Service
+
+The monorepo now includes a dedicated File Manager HTTP service responsible for storing Markdown problem statements on a shared volume. Key capabilities include:
+
+- REST endpoints to list, read, and create Markdown problems.
+- Configurable storage root via the `PROBLEM_STORAGE_ROOT` environment variable.
+- Enforced payload limits (`FILE_MANAGER_MAX_SIZE_MB`) to prevent oversized uploads.
+- Docker Compose integration with a persistent `problem_markdown_data` volume shared with the backend.
+
+> The service lives under [`packages/file-manager-service`](packages/file-manager-service) and ships with a Dockerfile so it can run alongside the rest of the stack.
 
 ## 🗄️ Backend Overview
 

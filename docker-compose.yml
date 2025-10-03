@@ -20,8 +20,26 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      file-manager:
+        condition: service_started
     volumes:
       - ./apps/app-backend/storage:/app/apps/app-backend/storage
+      - problem_markdown_data:/app/storage/problems
+    restart: unless-stopped
+
+  file-manager:
+    build:
+      context: .
+      dockerfile: packages/file-manager-service/Dockerfile
+    environment:
+      NODE_ENV: development
+      FILE_MANAGER_PORT: 4100
+      PROBLEM_STORAGE_ROOT: /app/storage/problems
+      FILE_MANAGER_MAX_SIZE_MB: 2
+    ports:
+      - "4100:4100"
+    volumes:
+      - problem_markdown_data:/app/storage/problems
     restart: unless-stopped
 
   postgres:
@@ -45,3 +63,4 @@ services:
 
 volumes:
   postgres_data:
+  problem_markdown_data:

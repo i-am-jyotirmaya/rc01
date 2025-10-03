@@ -92,6 +92,7 @@ See the [Docker](#docker) section for more details.
 The backend ships with a Compose file that starts:
 
 - `app-backend`: Node.js service running on port 4000.
+- `file-manager`: Dedicated Markdown storage service exposed on port 4100 and sharing the `problem_markdown_data` volume.
 - `postgres`: Postgres 15 database with a named volume for persistence.
 
 Available scripts:

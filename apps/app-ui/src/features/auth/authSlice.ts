@@ -1,19 +1,15 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type {
+  AuthResponsePayload,
   LoginRequestPayload,
-  LoginResponsePayload,
   RegisterRequestPayload,
-  RegisterResponsePayload,
 } from "@rc/api-client";
 import { ApiError } from "@rc/api-client";
 import { authApi } from "../../services/api";
 
 export type AuthUiMode = "login" | "register";
 
-export interface LoginFormValues extends LoginRequestPayload {}
-export interface RegisterFormValues extends RegisterRequestPayload {
-  confirmPassword: string;
-}
+export type LoginFormValues = LoginRequestPayload;
 
 interface AuthState {
   modalOpen: boolean;
@@ -30,7 +26,7 @@ const initialState: AuthState = {
 };
 
 export const submitLogin = createAsyncThunk<
-  LoginResponsePayload,
+  AuthResponsePayload,
   LoginFormValues,
   { rejectValue: string }
 >("auth/submitLogin", async (payload, { rejectWithValue }) => {
@@ -45,13 +41,12 @@ export const submitLogin = createAsyncThunk<
 });
 
 export const submitRegistration = createAsyncThunk<
-  RegisterResponsePayload,
-  RegisterFormValues,
+  AuthResponsePayload,
+  RegisterRequestPayload,
   { rejectValue: string }
 >("auth/submitRegistration", async (payload, { rejectWithValue }) => {
-  const { confirmPassword, ...request } = payload;
   try {
-    return await authApi.register(request);
+    return await authApi.register(payload);
   } catch (error) {
     if (error instanceof ApiError) {
       return rejectWithValue(error.message);
@@ -90,6 +85,7 @@ const authSlice = createSlice({
       })
       .addCase(submitLogin.fulfilled, (state) => {
         state.status = "succeeded";
+        state.modalOpen = false;
       })
       .addCase(submitLogin.rejected, (state, action) => {
         state.status = "failed";
@@ -101,6 +97,7 @@ const authSlice = createSlice({
       })
       .addCase(submitRegistration.fulfilled, (state) => {
         state.status = "succeeded";
+        state.modalOpen = false;
       })
       .addCase(submitRegistration.rejected, (state, action) => {
         state.status = "failed";

@@ -7,7 +7,7 @@ export type DbUserRow = {
   first_name: string;
   last_name: string;
   password_hash: string;
-  photo_path: string;
+  photo_path: string | null;
   created_at: Date;
 };
 
@@ -17,7 +17,7 @@ export type CreateUserPayload = {
   firstName: string;
   lastName: string;
   passwordHash: string;
-  photoPath: string;
+  photoPath: string | null;
 };
 
 export const insertUser = async (payload: CreateUserPayload): Promise<DbUserRow> => {

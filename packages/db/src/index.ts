@@ -43,6 +43,27 @@ export const runCoreMigrations = async (): Promise<void> => {
     `);
 
     await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);');
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS battles (
+        id UUID PRIMARY KEY,
+        name VARCHAR(160) NOT NULL,
+        short_description TEXT,
+        status VARCHAR(32) NOT NULL DEFAULT 'draft',
+        configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
+        auto_start BOOLEAN NOT NULL DEFAULT FALSE,
+        scheduled_start_at TIMESTAMPTZ,
+        started_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CHECK (status IN ('draft', 'configuring', 'scheduled', 'ready', 'active', 'completed', 'cancelled'))
+      );
+    `);
+
+    await client.query('CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);');
+    await client.query(
+      'CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at) WHERE scheduled_start_at IS NOT NULL;',
+    );
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -53,3 +74,4 @@ export const runCoreMigrations = async (): Promise<void> => {
 };
 
 export * from './users';
+export * from './battles';

@@ -13,3 +13,4 @@ export const setApiBaseUrl = (nextBaseUrl?: string) => {
 export const getApiBaseUrl = () => apiLayer.client.getBaseUrl();
 
 export const authApi = apiLayer.auth;
+export const battleApi = apiLayer.battles;

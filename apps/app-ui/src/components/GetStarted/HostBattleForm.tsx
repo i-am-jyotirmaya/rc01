@@ -1,9 +1,27 @@
-import { Button, Checkbox, Col, Divider, Form, Input, InputNumber, Radio, Row, Select, Space, Switch, Typography } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  DatePicker,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Switch,
+  Typography,
+} from "antd";
 import type { FormInstance } from "antd";
+import type { Dayjs } from "dayjs";
 import type { FC } from "react";
 import { useMemo } from "react";
 
 type PrivacySetting = "public" | "invite";
+
+type StartMode = "manual" | "scheduled";
 
 type HostBattleFormValues = {
   battleName: string;
@@ -14,7 +32,8 @@ type HostBattleFormValues = {
   privacy: PrivacySetting;
   allowSpectators: boolean;
   voiceChat: boolean;
-  autoStart: boolean;
+  startMode: StartMode;
+  scheduledStartAt?: Dayjs | null;
   turnTimeLimit?: number;
   totalDuration?: number;
   scoringRules?: string;
@@ -36,6 +55,9 @@ interface HostBattleFormProps {
   showAdvanced: boolean;
   onToggleAdvanced: (checked: boolean) => void;
   onSubmit: (values: HostBattleFormValues) => void;
+  submitButtonLabel?: string;
+  submitButtonLoading?: boolean;
+  onReset?: () => void;
 }
 
 const basicSelectOptions = {
@@ -90,13 +112,16 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
   showAdvanced,
   onToggleAdvanced,
   onSubmit,
+  submitButtonLabel = "Create battle",
+  submitButtonLoading = false,
+  onReset,
 }) => {
   const initialValues = useMemo<Partial<HostBattleFormValues>>(
     () => ({
       privacy: "public",
       allowSpectators: true,
       voiceChat: false,
-      autoStart: true,
+      startMode: "manual",
       teamBalancing: true,
       rematchDefaults: false,
     }),
@@ -194,8 +219,41 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
           </Form.Item>
         </Col>
         <Col {...fieldColProps}>
-          <Form.Item name="autoStart" label="Auto-start when full" valuePropName="checked">
-            <Switch />
+          <Form.Item name="startMode" label="Battle launch mode">
+            <Radio.Group optionType="button" buttonStyle="solid">
+              <Radio.Button value="manual">Manual start</Radio.Button>
+              <Radio.Button value="scheduled">Scheduled start</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+        </Col>
+        <Col {...fieldColProps}>
+          <Form.Item shouldUpdate noStyle>
+            {() => {
+              const mode = form.getFieldValue("startMode") as StartMode;
+              return (
+                <Form.Item
+                  name="scheduledStartAt"
+                  label="Scheduled start time"
+                  rules={
+                    mode === "scheduled"
+                      ? [
+                          {
+                            required: true,
+                            message: "Select a start time for the scheduled launch.",
+                          },
+                        ]
+                      : []
+                  }
+                >
+                  <DatePicker
+                    showTime
+                    style={{ width: "100%" }}
+                    disabled={mode !== "scheduled"}
+                    allowClear
+                  />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
         </Col>
       </Row>
@@ -335,15 +393,18 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button
               onClick={() => {
-                form.resetFields();
-                // Reset the advanced toggle alongside the form fields for clarity.
-                onToggleAdvanced(false);
+                if (onReset) {
+                  onReset();
+                } else {
+                  form.resetFields();
+                  onToggleAdvanced(false);
+                }
               }}
             >
               Reset
             </Button>
-            <Button type="primary" htmlType="submit">
-              Create battle
+            <Button type="primary" htmlType="submit" loading={submitButtonLoading}>
+              {submitButtonLabel}
             </Button>
           </Space>
         )}
@@ -352,6 +413,6 @@ export const HostBattleForm: FC<HostBattleFormProps> = ({
   );
 };
 
-export type { HostBattleFormValues };
+export type { HostBattleFormValues, StartMode };
 
 

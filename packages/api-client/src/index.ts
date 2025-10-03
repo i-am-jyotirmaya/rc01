@@ -85,6 +85,30 @@ export class ApiClient {
     return headers;
   }
 
+  async get<T>(path: string, init?: RequestInit): Promise<T> {
+    if (this.isMockMode()) {
+      return Promise.resolve({} as T);
+    }
+
+    const headers = this.mergeHeaders(init?.headers);
+    const response = await this.fetchFn!(this.buildUrl(path), {
+      method: 'GET',
+      headers,
+      ...init,
+    });
+
+    if (!response.ok) {
+      const message = await this.safeReadError(response);
+      throw new ApiError(message, response.status);
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return (await response.json()) as T;
+  }
+
   async post<T>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
     if (this.isMockMode()) {
       // Backend wiring not ready; resolve immediately to keep the UI responsive during integration work.
@@ -115,6 +139,52 @@ export class ApiClient {
 
     const response = await this.fetchFn!(this.buildUrl(path), {
       method: "POST",
+      body: requestBody ?? JSON.stringify({}),
+      headers,
+      ...init,
+    });
+
+    if (!response.ok) {
+      const message = await this.safeReadError(response);
+      throw new ApiError(message, response.status);
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return (await response.json()) as T;
+  }
+
+  async patch<T>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
+    if (this.isMockMode()) {
+      return Promise.resolve({} as T);
+    }
+
+    const headers = this.mergeHeaders(init?.headers);
+    let requestBody: BodyInit | null = null;
+
+    if (body instanceof FormData) {
+      requestBody = body;
+      headers.delete('Content-Type');
+    } else if (
+      body instanceof URLSearchParams ||
+      body instanceof Blob ||
+      body instanceof ArrayBuffer ||
+      typeof body === 'string'
+    ) {
+      requestBody = body as BodyInit;
+    } else if (body !== undefined && body !== null) {
+      requestBody = JSON.stringify(body);
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+    } else if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    const response = await this.fetchFn!(this.buildUrl(path), {
+      method: 'PATCH',
       body: requestBody ?? JSON.stringify({}),
       headers,
       ...init,
@@ -218,12 +288,95 @@ export class AuthApi {
   }
 }
 
+export type BattleStatus =
+  | 'draft'
+  | 'configuring'
+  | 'ready'
+  | 'scheduled'
+  | 'active'
+  | 'completed'
+  | 'cancelled';
+
+export type BattleStartMode = 'manual' | 'scheduled';
+
+export interface BattleRecord {
+  id: string;
+  name: string;
+  shortDescription: string | null;
+  status: BattleStatus;
+  configuration: Record<string, unknown>;
+  autoStart: boolean;
+  scheduledStartAt: string | null;
+  startedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBattleRequestPayload {
+  name: string;
+  shortDescription?: string | null;
+  configuration?: Record<string, unknown>;
+  startMode: BattleStartMode;
+  scheduledStartAt?: string | null;
+}
+
+export interface UpdateBattleRequestPayload {
+  name?: string;
+  shortDescription?: string | null;
+  configuration?: Record<string, unknown>;
+  startMode?: BattleStartMode;
+  scheduledStartAt?: string | null;
+  status?: BattleStatus;
+}
+
+export interface BattleResponsePayload {
+  battle: BattleRecord;
+}
+
+export interface ListBattlesResponsePayload {
+  battles: BattleRecord[];
+}
+
+interface BattleRoutesConfig {
+  base: string;
+}
+
+const defaultBattleRoutes: BattleRoutesConfig = {
+  base: '/api/battles',
+};
+
+export class BattleApi {
+  private readonly routes: BattleRoutesConfig;
+
+  constructor(private readonly client: ApiClient, routes: Partial<BattleRoutesConfig> = {}) {
+    this.routes = { ...defaultBattleRoutes, ...routes };
+  }
+
+  listBattles() {
+    return this.client.get<ListBattlesResponsePayload>(this.routes.base);
+  }
+
+  createBattle(payload: CreateBattleRequestPayload) {
+    return this.client.post<BattleResponsePayload>(this.routes.base, payload);
+  }
+
+  updateBattle(battleId: string, payload: UpdateBattleRequestPayload) {
+    return this.client.patch<BattleResponsePayload>(`${this.routes.base}/${battleId}`, payload);
+  }
+
+  startBattle(battleId: string) {
+    return this.client.post<BattleResponsePayload>(`${this.routes.base}/${battleId}/start`);
+  }
+}
+
 export interface ApiLayerConfig extends ApiClientOptions {
   authRoutes?: Partial<AuthRoutesConfig>;
+  battleRoutes?: Partial<BattleRoutesConfig>;
 }
 
 export const createApiLayer = (config?: ApiLayerConfig) => {
   const client = new ApiClient(config);
   const auth = new AuthApi(client, config?.authRoutes);
-  return { client, auth };
+  const battles = new BattleApi(client, config?.battleRoutes);
+  return { client, auth, battles };
 };

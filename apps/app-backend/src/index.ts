@@ -3,6 +3,7 @@ import { env } from './config/env';
 import { app } from './app';
 import { ensureDirectory } from './utils/filesystem';
 import { logger } from './utils/logger';
+import { initializeBattleScheduling } from './services/battleService';
 
 const startServer = async (): Promise<void> => {
   try {
@@ -18,6 +19,7 @@ const startServer = async (): Promise<void> => {
     });
 
     await runCoreMigrations();
+    await initializeBattleScheduling();
 
     app.listen(env.port, () => {
       logger.info(`Backend listening on port ${env.port}`);

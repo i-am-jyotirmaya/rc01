@@ -1,23 +1,211 @@
 import {
+  Button,
   ConfigProvider,
   Divider,
+  Drawer,
+  Empty,
   Form,
   Layout,
   Space,
+  Table,
   Tag,
   Typography,
   message,
   theme,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 import type { CSSProperties, FC } from "react";
-import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  BattleRecord,
+  BattleStatus,
+  CreateBattleRequestPayload,
+  UpdateBattleRequestPayload,
+} from "@rc/api-client";
+import { Link } from "react-router-dom";
 import { HostBattleForm } from "../components/GetStarted/HostBattleForm";
-import type { HostBattleFormValues } from "../components/GetStarted/HostBattleForm";
+import type { HostBattleFormValues, StartMode } from "../components/GetStarted/HostBattleForm";
+import { battleApi } from "../services/api";
 import { useThemeMode } from "../providers/theme-mode-context";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
+
+const baseFormDefaults: Partial<HostBattleFormValues> = {
+  privacy: "public",
+  allowSpectators: true,
+  voiceChat: false,
+  startMode: "manual",
+  teamBalancing: true,
+  rematchDefaults: false,
+};
+
+const advancedFieldKeys: (keyof HostBattleFormValues)[] = [
+  "turnTimeLimit",
+  "totalDuration",
+  "scoringRules",
+  "tieBreakPreference",
+  "powerUps",
+  "ratingFloor",
+  "ratingCeiling",
+  "moderatorRoles",
+  "preloadedResources",
+  "rematchDefaults",
+  "joinQueueSize",
+  "password",
+  "linkExpiry",
+];
+
+const configurableStatuses: BattleStatus[] = ["draft", "configuring", "ready", "scheduled"];
+
+const statusMeta: Record<BattleStatus, { label: string; color: string }> = {
+  draft: { label: "Draft", color: "default" },
+  configuring: { label: "Configuring", color: "gold" },
+  ready: { label: "Ready", color: "green" },
+  scheduled: { label: "Scheduled", color: "blue" },
+  active: { label: "Active", color: "purple" },
+  completed: { label: "Completed", color: "default" },
+  cancelled: { label: "Cancelled", color: "red" },
+};
+
+const formatDateTime = (value?: string | null) =>
+  value ? dayjs(value).format("MMM D, YYYY h:mm A") : "—";
+
+const createErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const extractBattles = (response: unknown): BattleRecord[] => {
+  const candidate = (response as { battles?: unknown }).battles;
+  return Array.isArray(candidate) ? (candidate as BattleRecord[]) : [];
+};
+
+const extractBattle = (response: unknown): BattleRecord | undefined => {
+  const candidate = (response as { battle?: unknown }).battle;
+  if (candidate && typeof candidate === "object") {
+    return candidate as BattleRecord;
+  }
+  return undefined;
+};
+
+const shouldDisplayAdvanced = (values: Partial<HostBattleFormValues>) =>
+  advancedFieldKeys.some((key) => {
+    const value = values[key];
+
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+
+    if (typeof value === "number") {
+      return value !== undefined && value !== null;
+    }
+
+    if (typeof value === "boolean") {
+      return value === true;
+    }
+
+    return value !== undefined && value !== null && value !== "";
+  });
+
+const buildBattlePayload = (
+  values: HostBattleFormValues,
+): {
+  create: CreateBattleRequestPayload;
+  update: UpdateBattleRequestPayload;
+  configuration: Record<string, unknown>;
+} => {
+  const startMode = (values.startMode ?? "manual") as StartMode;
+  const sanitizedName = values.battleName.trim();
+  const shortDescription = values.shortDescription?.trim() ?? "";
+  const scheduledStartAt =
+    startMode === "scheduled"
+      ? values.scheduledStartAt
+        ? values.scheduledStartAt.toISOString()
+        : null
+      : null;
+
+  const configurationInput = {
+    ...values,
+    battleName: sanitizedName,
+    shortDescription: shortDescription || undefined,
+    startMode,
+    scheduledStartAt,
+  };
+
+  const configuration = JSON.parse(JSON.stringify(configurationInput)) as Record<string, unknown>;
+
+  if (!shortDescription) {
+    delete configuration.shortDescription;
+  }
+
+  if (startMode !== "scheduled") {
+    configuration.scheduledStartAt = null;
+  }
+
+  const createPayload: CreateBattleRequestPayload = {
+    name: sanitizedName,
+    shortDescription: shortDescription ? shortDescription : null,
+    configuration,
+    startMode,
+    scheduledStartAt,
+  };
+
+  const updatePayload: UpdateBattleRequestPayload = {
+    name: sanitizedName,
+    shortDescription: shortDescription ? shortDescription : null,
+    configuration,
+    startMode,
+    scheduledStartAt,
+  };
+
+  return { create: createPayload, update: updatePayload, configuration };
+};
+
+const extractFormValuesFromBattle = (battle: BattleRecord): Partial<HostBattleFormValues> => {
+  const configuration = (battle.configuration ?? {}) as Record<string, unknown>;
+  const storedStartMode =
+    typeof configuration.startMode === "string" ? (configuration.startMode as StartMode) : undefined;
+  const startMode: StartMode = storedStartMode ?? (battle.autoStart ? "scheduled" : "manual");
+
+  const scheduledSource =
+    battle.scheduledStartAt ??
+    (typeof configuration.scheduledStartAt === "string"
+      ? (configuration.scheduledStartAt as string)
+      : null);
+
+  const merged: Partial<HostBattleFormValues> = {
+    ...baseFormDefaults,
+    ...(configuration as Partial<HostBattleFormValues>),
+    battleName: battle.name,
+    shortDescription:
+      battle.shortDescription ??
+      (typeof configuration.shortDescription === "string"
+        ? (configuration.shortDescription as string)
+        : undefined),
+    startMode,
+    scheduledStartAt: scheduledSource ? dayjs(scheduledSource) : null,
+  };
+
+  if (typeof merged.allowSpectators !== "boolean") {
+    merged.allowSpectators = true;
+  }
+
+  if (typeof merged.voiceChat !== "boolean") {
+    merged.voiceChat = false;
+  }
+
+  if (typeof merged.teamBalancing !== "boolean") {
+    merged.teamBalancing = true;
+  }
+
+  if (typeof merged.rematchDefaults !== "boolean") {
+    merged.rematchDefaults = false;
+  }
+
+  return merged;
+};
+
+const isConfigurableStatus = (status: BattleStatus) => configurableStatuses.includes(status);
 
 interface HostBattlePalette {
   backgroundGradients: string[];
@@ -64,8 +252,16 @@ interface HostBattlePalette {
 
 export const HostBattlePage: FC = () => {
   const [form] = Form.useForm<HostBattleFormValues>();
+  const [drawerForm] = Form.useForm<HostBattleFormValues>();
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  const navigate = useNavigate();
+  const [drawerAdvancedOptions, setDrawerAdvancedOptions] = useState(false);
+  const [battles, setBattles] = useState<BattleRecord[]>([]);
+  const [loadingBattles, setLoadingBattles] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [startingBattleId, setStartingBattleId] = useState<string | null>(null);
+  const [selectedBattle, setSelectedBattle] = useState<BattleRecord | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { token } = theme.useToken();
   const { mode } = useThemeMode();
   const accentColor = token.colorWarning;
@@ -262,6 +458,20 @@ export const HostBattlePage: FC = () => {
     [palette],
   );
 
+  const tablePanelStyle = useMemo<CSSProperties>(
+    () => ({
+      background: palette.panelBackground,
+      border: `1px solid ${palette.panelBorderColor}`,
+      boxShadow: palette.panelShadow,
+      borderRadius: 24,
+      padding: "clamp(24px, 4vw, 40px)",
+      display: "flex",
+      flexDirection: "column",
+      gap: token.marginMD,
+    }),
+    [palette, token.marginMD],
+  );
+
   const tagStyle = useMemo<CSSProperties>(
     () => ({
       border: `1px solid ${palette.tagBorderColor}`,
@@ -427,14 +637,208 @@ export const HostBattlePage: FC = () => {
     [accentColor, palette],
   );
 
+  const loadBattles = useCallback(async () => {
+    setLoadingBattles(true);
+    try {
+      const response = await battleApi.listBattles();
+      setBattles(extractBattles(response));
+    } catch (error) {
+      message.error(createErrorMessage(error, "Unable to load battles."));
+    } finally {
+      setLoadingBattles(false);
+    }
+  }, []);
+
   const handleSubmit = useCallback(
     async (values: HostBattleFormValues) => {
-      message.success(`Battle "${values.battleName}" configured`);
-      form.resetFields();
-      setShowAdvancedOptions(false);
-      navigate("/");
+      setIsCreating(true);
+      try {
+        const { create } = buildBattlePayload(values);
+        const response = await battleApi.createBattle(create);
+        const createdBattle = extractBattle(response);
+        message.success(`Battle "${createdBattle?.name ?? values.battleName.trim()}" saved`);
+        form.resetFields();
+        setShowAdvancedOptions(false);
+        await loadBattles();
+      } catch (error) {
+        message.error(createErrorMessage(error, "Failed to create battle."));
+      } finally {
+        setIsCreating(false);
+      }
     },
-    [form, navigate],
+    [form, loadBattles],
+  );
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    setSelectedBattle(null);
+    setDrawerAdvancedOptions(false);
+    drawerForm.resetFields();
+  }, [drawerForm]);
+
+  const handleDrawerReset = useCallback(() => {
+    if (!selectedBattle) {
+      drawerForm.resetFields();
+      setDrawerAdvancedOptions(false);
+      return;
+    }
+
+    const values = extractFormValuesFromBattle(selectedBattle);
+    drawerForm.setFieldsValue(values as Partial<HostBattleFormValues>);
+    setDrawerAdvancedOptions(shouldDisplayAdvanced(values));
+  }, [drawerForm, selectedBattle]);
+
+  const openBattleDrawer = useCallback(
+    (battle: BattleRecord) => {
+      const values = extractFormValuesFromBattle(battle);
+      drawerForm.resetFields();
+      drawerForm.setFieldsValue(values as Partial<HostBattleFormValues>);
+      setDrawerAdvancedOptions(shouldDisplayAdvanced(values));
+      setSelectedBattle(battle);
+      setIsDrawerOpen(true);
+    },
+    [drawerForm],
+  );
+
+  const handleDrawerSubmit = useCallback(
+    async (values: HostBattleFormValues) => {
+      if (!selectedBattle) {
+        return;
+      }
+
+      setIsUpdating(true);
+      try {
+        const { update } = buildBattlePayload(values);
+        const response = await battleApi.updateBattle(selectedBattle.id, update);
+        const battle = extractBattle(response) ?? selectedBattle;
+        message.success(`Battle "${battle.name}" updated`);
+        await loadBattles();
+
+        if (isConfigurableStatus(battle.status)) {
+          setSelectedBattle(battle);
+          const nextValues = extractFormValuesFromBattle(battle);
+          drawerForm.setFieldsValue(nextValues as Partial<HostBattleFormValues>);
+          setDrawerAdvancedOptions(shouldDisplayAdvanced(nextValues));
+        } else {
+          handleDrawerClose();
+        }
+      } catch (error) {
+        message.error(createErrorMessage(error, "Failed to update battle."));
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [drawerForm, handleDrawerClose, loadBattles, selectedBattle],
+  );
+
+  const handleStartBattle = useCallback(
+    async (battle: BattleRecord) => {
+      setStartingBattleId(battle.id);
+      try {
+        const response = await battleApi.startBattle(battle.id);
+        const updatedBattle = extractBattle(response) ?? battle;
+        message.success(`Battle "${updatedBattle.name}" launched`);
+        await loadBattles();
+
+        if (selectedBattle?.id === updatedBattle.id) {
+          if (isConfigurableStatus(updatedBattle.status)) {
+            setSelectedBattle(updatedBattle);
+          } else {
+            handleDrawerClose();
+          }
+        }
+      } catch (error) {
+        message.error(createErrorMessage(error, "Failed to start battle."));
+      } finally {
+        setStartingBattleId(null);
+      }
+    },
+    [handleDrawerClose, loadBattles, selectedBattle],
+  );
+
+  useEffect(() => {
+    void loadBattles();
+  }, [loadBattles]);
+
+  const columns = useMemo<ColumnsType<BattleRecord>>(
+    () => [
+      {
+        title: "Battle",
+        dataIndex: "name",
+        key: "name",
+        render: (_: unknown, record) => (
+          <Space direction="vertical" size={4} align="start">
+            <Typography.Text strong style={{ color: palette.headingColor }}>
+              {record.name}
+            </Typography.Text>
+            {record.shortDescription ? (
+              <Typography.Text style={{ color: palette.paragraphMutedColor }}>
+                {record.shortDescription}
+              </Typography.Text>
+            ) : null}
+          </Space>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (status: BattleStatus) => {
+          const meta = statusMeta[status];
+          return <Tag color={meta.color}>{meta.label}</Tag>;
+        },
+      },
+      {
+        title: "Launch",
+        key: "launch",
+        render: (_: unknown, record) => (
+          <Space direction="vertical" size={4} align="start">
+            <Tag color={record.autoStart ? statusMeta.scheduled.color : "default"}>
+              {record.autoStart ? "Scheduled" : "Manual"}
+            </Tag>
+            {record.autoStart && record.scheduledStartAt ? (
+              <Typography.Text style={{ color: palette.paragraphMutedColor }}>
+                {formatDateTime(record.scheduledStartAt)}
+              </Typography.Text>
+            ) : null}
+          </Space>
+        ),
+      },
+      {
+        title: "Last updated",
+        dataIndex: "updatedAt",
+        key: "updatedAt",
+        render: (value: string) => (
+          <Typography.Text style={{ color: palette.paragraphMutedColor }}>
+            {formatDateTime(value)}
+          </Typography.Text>
+        ),
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        align: "right" as const,
+        render: (_: unknown, record) => {
+          const canStart = record.status === "ready" || record.status === "scheduled";
+          return (
+            <Space size="small">
+              <Button type="link" onClick={() => openBattleDrawer(record)} disabled={!isConfigurableStatus(record.status)}>
+                Configure
+              </Button>
+              <Button
+                type="link"
+                onClick={() => handleStartBattle(record)}
+                disabled={!canStart}
+                loading={startingBattleId === record.id}
+              >
+                Start now
+              </Button>
+            </Space>
+          );
+        },
+      },
+    ],
+    [handleStartBattle, openBattleDrawer, palette.headingColor, palette.paragraphMutedColor, startingBattleId],
   );
 
   return (
@@ -487,11 +891,56 @@ export const HostBattlePage: FC = () => {
                 showAdvanced={showAdvancedOptions}
                 onToggleAdvanced={setShowAdvancedOptions}
                 onSubmit={handleSubmit}
+                submitButtonLoading={isCreating}
               />
             </div>
           </ConfigProvider>
         </div>
+        <ConfigProvider theme={formTheme}>
+          <div style={tablePanelStyle}>
+            <Title level={4} style={{ margin: 0, color: palette.headingColor }}>
+              Battle control center
+            </Title>
+            <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
+              Monitor upcoming battles, tweak configurations, and launch when the timing is right. Scheduled battles will
+              auto-launch, while manual battles stay parked here until you start them.
+            </Paragraph>
+            <Table
+              columns={columns}
+              dataSource={battles}
+              rowKey="id"
+              loading={loadingBattles}
+              pagination={false}
+              size="middle"
+              locale={{ emptyText: <Empty description="No battles configured yet" /> }}
+              style={{ background: "transparent" }}
+            />
+          </div>
+        </ConfigProvider>
       </div>
+      <Drawer
+        title={selectedBattle ? `Configure "${selectedBattle.name}"` : "Configure battle"}
+        open={isDrawerOpen}
+        onClose={handleDrawerClose}
+        width={640}
+        destroyOnClose={false}
+        bodyStyle={{ padding: 0 }}
+      >
+        <ConfigProvider theme={formTheme}>
+          <div className="host-battle-panel" style={{ ...formPanelStyle, border: "none", boxShadow: "none" }}>
+            <style>{formEnhancementStyles}</style>
+            <HostBattleForm
+              form={drawerForm}
+              showAdvanced={drawerAdvancedOptions}
+              onToggleAdvanced={setDrawerAdvancedOptions}
+              onSubmit={handleDrawerSubmit}
+              submitButtonLabel="Save changes"
+              submitButtonLoading={isUpdating}
+              onReset={handleDrawerReset}
+            />
+          </div>
+        </ConfigProvider>
+      </Drawer>
     </Content>
   );
 };

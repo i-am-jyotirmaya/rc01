@@ -19,9 +19,15 @@ export class ApiClient {
   private readonly defaultHeaders: HeadersInit;
 
   constructor(options?: ApiClientOptions) {
-    this.baseUrl = options?.baseUrl ? options.baseUrl.replace(/\/$/, "") : undefined;
-    this.fetchFn = options?.fetchFn ?? (typeof fetch === "function" ? fetch.bind(globalThis) : undefined);
-    this.defaultHeaders = options?.defaultHeaders ?? { "Content-Type": "application/json" };
+    this.baseUrl = options?.baseUrl
+      ? options.baseUrl.replace(/\/$/, "")
+      : undefined;
+    this.fetchFn =
+      options?.fetchFn ??
+      (typeof fetch === "function" ? fetch.bind(globalThis) : undefined);
+    this.defaultHeaders = options?.defaultHeaders ?? {
+      "Content-Type": "application/json",
+    };
   }
 
   setBaseUrl(baseUrl?: string): void {
@@ -176,14 +182,17 @@ interface AuthRoutesConfig {
 }
 
 const defaultAuthRoutes: AuthRoutesConfig = {
-  login: "/auth/login",
-  register: "/auth/register",
+  login: "/api/auth/login",
+  register: "/api/auth/register",
 };
 
 export class AuthApi {
   private readonly routes: AuthRoutesConfig;
 
-  constructor(private readonly client: ApiClient, routes: Partial<AuthRoutesConfig> = {}) {
+  constructor(
+    private readonly client: ApiClient,
+    routes: Partial<AuthRoutesConfig> = {}
+  ) {
     this.routes = { ...defaultAuthRoutes, ...routes };
   }
 
@@ -202,7 +211,10 @@ export class AuthApi {
       formData.append("photo", payload.photo);
     }
 
-    return this.client.post<RegisterResponsePayload>(this.routes.register, formData);
+    return this.client.post<RegisterResponsePayload>(
+      this.routes.register,
+      formData
+    );
   }
 }
 

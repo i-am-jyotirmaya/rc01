@@ -139,23 +139,42 @@ export const AuthModal: FC = () => {
               name="username"
               rules={[
                 { required: true, message: "Enter your username." },
-                { min: 3, message: "Usernames need to be at least 3 characters long." },
+                {
+                  min: 3,
+                  message: "Usernames need to be at least 3 characters long.",
+                },
                 { max: 64, message: "Usernames cannot exceed 64 characters." },
               ]}
             >
-              <Input placeholder="your_username" autoFocus allowClear autoComplete="username" />
+              <Input
+                placeholder="your_username"
+                autoFocus
+                allowClear
+                autoComplete="username"
+              />
             </Form.Item>
             <Form.Item
               label="Password"
               name="password"
               rules={[
                 { required: true, message: "A password is required." },
-                { min: 8, message: "Passwords need to be at least 8 characters long." },
+                {
+                  min: 8,
+                  message: "Passwords need to be at least 8 characters long.",
+                },
               ]}
             >
-              <Input.Password placeholder="Enter your password" autoComplete="current-password" />
+              <Input.Password
+                placeholder="Enter your password"
+                autoComplete="current-password"
+              />
             </Form.Item>
-            <Button type="primary" htmlType="submit" block loading={isSubmitting}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              loading={isSubmitting}
+            >
               Log in
             </Button>
           </Form>
@@ -172,23 +191,37 @@ export const AuthModal: FC = () => {
               name="username"
               rules={[
                 { required: true, message: "Choose a username." },
-                { min: 3, message: "Usernames need to be at least 3 characters long." },
+                {
+                  min: 3,
+                  message: "Usernames need to be at least 3 characters long.",
+                },
                 { max: 64, message: "Usernames cannot exceed 64 characters." },
               ]}
             >
-              <Input placeholder="your_username" autoFocus allowClear autoComplete="username" />
+              <Input
+                placeholder="your_username"
+                autoFocus
+                allowClear
+                autoComplete="username"
+              />
             </Form.Item>
             <Form.Item
               label="First name"
               name="firstName"
-              rules={[{ required: true, message: "Tell us your first name." }, { max: 120, message: "Keep it under 120 characters." }]}
+              rules={[
+                { required: true, message: "Tell us your first name." },
+                { max: 120, message: "Keep it under 120 characters." },
+              ]}
             >
               <Input placeholder="Jane" allowClear autoComplete="given-name" />
             </Form.Item>
             <Form.Item
               label="Last name"
               name="lastName"
-              rules={[{ required: true, message: "What is your last name?" }, { max: 120, message: "Keep it under 120 characters." }]}
+              rules={[
+                { required: true, message: "What is your last name?" },
+                { max: 120, message: "Keep it under 120 characters." },
+              ]}
             >
               <Input placeholder="Doe" allowClear autoComplete="family-name" />
             </Form.Item>
@@ -197,10 +230,16 @@ export const AuthModal: FC = () => {
               name="password"
               rules={[
                 { required: true, message: "Choose a password." },
-                { min: 8, message: "Create a password with at least 8 characters." },
+                {
+                  min: 8,
+                  message: "Create a password with at least 8 characters.",
+                },
               ]}
             >
-              <Input.Password placeholder="Create a password" autoComplete="new-password" />
+              <Input.Password
+                placeholder="Create a password"
+                autoComplete="new-password"
+              />
             </Form.Item>
             <Form.Item
               label="Confirm password"
@@ -218,7 +257,10 @@ export const AuthModal: FC = () => {
                 }),
               ]}
             >
-              <Input.Password placeholder="Repeat your password" autoComplete="new-password" />
+              <Input.Password
+                placeholder="Repeat your password"
+                autoComplete="new-password"
+              />
             </Form.Item>
             <Form.Item
               label="Profile photo"
@@ -236,7 +278,12 @@ export const AuthModal: FC = () => {
                 <Button icon={<UploadOutlined />}>Select image</Button>
               </Upload>
             </Form.Item>
-            <Button type="primary" htmlType="submit" block loading={isSubmitting}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              loading={isSubmitting}
+            >
               Create account
             </Button>
           </Form>
@@ -246,14 +293,22 @@ export const AuthModal: FC = () => {
           {mode === "login" ? (
             <>
               New here?
-              <Button type="link" onClick={() => handleModeSwitch("register")} style={{ padding: 0 }}>
+              <Button
+                type="link"
+                onClick={() => handleModeSwitch("register")}
+                style={{ padding: 0 }}
+              >
                 Create an account
               </Button>
             </>
           ) : (
             <>
               Already have an account?
-              <Button type="link" onClick={() => handleModeSwitch("login")} style={{ padding: 0 }}>
+              <Button
+                type="link"
+                onClick={() => handleModeSwitch("login")}
+                style={{ padding: 0 }}
+              >
                 Log in instead
               </Button>
             </>

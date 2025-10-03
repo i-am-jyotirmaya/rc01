@@ -1,4 +1,8 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import type {
   AuthResponsePayload,
   LoginRequestPayload,
@@ -36,7 +40,9 @@ export const submitLogin = createAsyncThunk<
     if (error instanceof ApiError) {
       return rejectWithValue(error.message);
     }
-    return rejectWithValue("We hit a snag while logging you in. Please try again soon.");
+    return rejectWithValue(
+      "We hit a snag while logging you in. Please try again soon.",
+    );
   }
 });
 
@@ -51,7 +57,9 @@ export const submitRegistration = createAsyncThunk<
     if (error instanceof ApiError) {
       return rejectWithValue(error.message);
     }
-    return rejectWithValue("Account creation is unavailable right now. Please try again later.");
+    return rejectWithValue(
+      "Account creation is unavailable right now. Please try again later.",
+    );
   }
 });
 
@@ -101,10 +109,12 @@ const authSlice = createSlice({
       })
       .addCase(submitRegistration.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.payload ?? "Unable to create an account right now.";
+        state.error =
+          action.payload ?? "Unable to create an account right now.";
       });
   },
 });
 
-export const { openLoginModal, closeLoginModal, setAuthMode, clearAuthError } = authSlice.actions;
+export const { openLoginModal, closeLoginModal, setAuthMode, clearAuthError } =
+  authSlice.actions;
 export const authReducer = authSlice.reducer;

@@ -8,6 +8,10 @@
 ![Ant Design](https://img.shields.io/badge/ui-Ant%20Design-%23726dd6)
 ![PNPM](https://img.shields.io/badge/package%20manager-pnpm-%23f69220)
 
+## Project Tracker
+
+- [Delivery Tracker](TASKS.md)
+
 ---
 
 ## ✨ About the Project

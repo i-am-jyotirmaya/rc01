@@ -23,19 +23,17 @@ export const registerHandler: RequestHandler = async (req, res, next) => {
       throw createHttpError(400, 'Invalid registration payload');
     }
 
-    if (!req.file) {
-      throw createHttpError(400, 'Profile photo is required');
-    }
-
     const authResponse = await registerUser({
       username: parsed.data.username,
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
       password: parsed.data.password,
-      photo: {
-        buffer: req.file.buffer,
-        mimetype: req.file.mimetype,
-      },
+      photo: req.file
+        ? {
+            buffer: req.file.buffer,
+            mimetype: req.file.mimetype,
+          }
+        : undefined,
     });
 
     res.status(201).json(authResponse);

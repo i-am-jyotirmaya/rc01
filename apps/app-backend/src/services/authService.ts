@@ -13,7 +13,7 @@ type RegisterInput = {
   firstName: string;
   lastName: string;
   password: string;
-  photo: {
+  photo?: {
     buffer: Buffer;
     mimetype: string;
   };
@@ -29,7 +29,7 @@ export type PublicUser = {
   username: string;
   firstName: string;
   lastName: string;
-  photoPath: string;
+  photoPath: string | null;
   createdAt: string;
 };
 
@@ -47,7 +47,7 @@ const toPublicUser = (user: DbUserRow): PublicUser => ({
   createdAt: user.created_at.toISOString(),
 });
 
-const saveProfilePhoto = async (photo: RegisterInput['photo']): Promise<string> => {
+const saveProfilePhoto = async (photo: NonNullable<RegisterInput['photo']>): Promise<string> => {
   await ensureDirectory(env.uploadsDir);
   const fileId = uuid();
   const extension = photo.mimetype === 'image/png' ? 'png' : 'jpg';
@@ -78,7 +78,7 @@ export const registerUser = async (input: RegisterInput): Promise<AuthResponse> 
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const photoPath = await saveProfilePhoto(input.photo);
+  const photoPath = input.photo ? await saveProfilePhoto(input.photo) : null;
   const userId = uuid();
 
   const createdUser = await insertUser({

@@ -37,7 +37,7 @@ export const runCoreMigrations = async (): Promise<void> => {
         first_name VARCHAR(120) NOT NULL,
         last_name VARCHAR(120) NOT NULL,
         password_hash TEXT NOT NULL,
-        photo_path TEXT NOT NULL,
+        photo_path TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);

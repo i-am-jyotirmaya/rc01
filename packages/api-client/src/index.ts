@@ -14,7 +14,7 @@ export class ApiError extends Error {
 }
 
 export class ApiClient {
-  private readonly baseUrl?: string;
+  private baseUrl?: string;
   private readonly fetchFn?: typeof fetch;
   private readonly defaultHeaders: HeadersInit;
 
@@ -22,6 +22,14 @@ export class ApiClient {
     this.baseUrl = options?.baseUrl ? options.baseUrl.replace(/\/$/, "") : undefined;
     this.fetchFn = options?.fetchFn ?? (typeof fetch === "function" ? fetch.bind(globalThis) : undefined);
     this.defaultHeaders = options?.defaultHeaders ?? { "Content-Type": "application/json" };
+  }
+
+  setBaseUrl(baseUrl?: string): void {
+    this.baseUrl = baseUrl ? baseUrl.replace(/\/$/, "") : undefined;
+  }
+
+  getBaseUrl(): string | undefined {
+    return this.baseUrl;
   }
 
   private isMockMode(): boolean {
@@ -34,19 +42,75 @@ export class ApiClient {
     return base + normalizedPath;
   }
 
-  async post<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  private mergeHeaders(override?: HeadersInit): Headers {
+    const headers = new Headers();
+
+    const apply = (input?: HeadersInit) => {
+      if (!input) {
+        return;
+      }
+
+      if (input instanceof Headers) {
+        input.forEach((value, key) => {
+          headers.set(key, value);
+        });
+        return;
+      }
+
+      if (Array.isArray(input)) {
+        input.forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            headers.set(key, value);
+          }
+        });
+        return;
+      }
+
+      Object.entries(input).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          headers.set(key, value as string);
+        }
+      });
+    };
+
+    apply(this.defaultHeaders);
+    apply(override);
+
+    return headers;
+  }
+
+  async post<T>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
     if (this.isMockMode()) {
       // Backend wiring not ready; resolve immediately to keep the UI responsive during integration work.
       return Promise.resolve({} as T);
     }
 
+    const headers = this.mergeHeaders(init?.headers);
+    let requestBody: BodyInit | null = null;
+
+    if (body instanceof FormData) {
+      requestBody = body;
+      headers.delete("Content-Type");
+    } else if (
+      body instanceof URLSearchParams ||
+      body instanceof Blob ||
+      body instanceof ArrayBuffer ||
+      typeof body === "string"
+    ) {
+      requestBody = body as BodyInit;
+    } else if (body !== undefined && body !== null) {
+      requestBody = JSON.stringify(body);
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+    } else if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+
     const response = await this.fetchFn!(this.buildUrl(path), {
       method: "POST",
-      body: JSON.stringify(body ?? {}),
-      headers: {
-        ...this.defaultHeaders,
-        ...(init?.headers ?? {}),
-      },
+      body: requestBody ?? JSON.stringify({}),
+      headers,
       ...init,
     });
 
@@ -76,23 +140,34 @@ export class ApiClient {
 }
 
 export interface LoginRequestPayload {
-  email: string;
+  username: string;
   password: string;
 }
 
-export interface LoginResponsePayload {
-  accessToken?: string;
-  refreshToken?: string;
-}
+export type LoginResponsePayload = AuthResponsePayload;
 
 export interface RegisterRequestPayload {
-  fullName: string;
-  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
   password: string;
+  photo?: File | Blob;
 }
 
-export interface RegisterResponsePayload {
-  userId?: string;
+export type RegisterResponsePayload = AuthResponsePayload;
+
+export interface AuthUserPayload {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  photoPath: string | null;
+  createdAt: string;
+}
+
+export interface AuthResponsePayload {
+  token: string;
+  user: AuthUserPayload;
 }
 
 interface AuthRoutesConfig {
@@ -117,7 +192,17 @@ export class AuthApi {
   }
 
   register(payload: RegisterRequestPayload) {
-    return this.client.post<RegisterResponsePayload>(this.routes.register, payload);
+    const formData = new FormData();
+    formData.append("username", payload.username);
+    formData.append("firstName", payload.firstName);
+    formData.append("lastName", payload.lastName);
+    formData.append("password", payload.password);
+
+    if (payload.photo) {
+      formData.append("photo", payload.photo);
+    }
+
+    return this.client.post<RegisterResponsePayload>(this.routes.register, formData);
   }
 }
 

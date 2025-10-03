@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { openLoginModal } from "../../features/auth/authSlice";
 import { useAppDispatch } from "../../store/hooks";
+import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 const { Header } = Layout;
@@ -60,6 +61,7 @@ export const AppNavbar: FC = () => {
         ) : null}
       </div>
       <Space size="middle" align="center">
+        <EnvironmentSwitcher />
         <Button type="default" onClick={handleLoginClick}>
           Log in
         </Button>

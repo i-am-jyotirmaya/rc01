@@ -5,6 +5,7 @@ import {
 } from "@reduxjs/toolkit";
 import type {
   AuthResponsePayload,
+  AuthUserPayload,
   LoginRequestPayload,
   RegisterRequestPayload,
 } from "@rc/api-client";
@@ -20,13 +21,84 @@ interface AuthState {
   mode: AuthUiMode;
   status: "idle" | "submitting" | "succeeded" | "failed";
   error: string | null;
+  user: AuthUserPayload | null;
+  token: string | null;
 }
+
+type PersistedAuth = Pick<AuthState, "token" | "user">;
+
+const AUTH_STORAGE_KEY = "rc.auth.session";
+
+const getStorage = (): Storage | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+const loadPersistedAuth = (): PersistedAuth | null => {
+  const storage = getStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const raw = storage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<PersistedAuth> | null;
+    if (!parsed) {
+      return null;
+    }
+
+    const token = typeof parsed.token === "string" ? parsed.token : null;
+    const user =
+      parsed.user && typeof parsed.user === "object"
+        ? (parsed.user as AuthUserPayload)
+        : null;
+
+    return { token, user };
+  } catch {
+    return null;
+  }
+};
+
+const persistAuth = (payload: AuthResponsePayload | null) => {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    if (payload) {
+      storage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify({ token: payload.token, user: payload.user }),
+      );
+    } else {
+      storage.removeItem(AUTH_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage persistence issues
+  }
+};
+
+const persistedAuth = loadPersistedAuth();
 
 const initialState: AuthState = {
   modalOpen: false,
   mode: "login",
   status: "idle",
   error: null,
+  user: persistedAuth?.user ?? null,
+  token: persistedAuth?.token ?? null,
 };
 
 export const submitLogin = createAsyncThunk<
@@ -35,7 +107,9 @@ export const submitLogin = createAsyncThunk<
   { rejectValue: string }
 >("auth/submitLogin", async (payload, { rejectWithValue }) => {
   try {
-    return await authApi.login(payload);
+    const response = await authApi.login(payload);
+    persistAuth(response);
+    return response;
   } catch (error) {
     if (error instanceof ApiError) {
       return rejectWithValue(error.message);
@@ -52,7 +126,9 @@ export const submitRegistration = createAsyncThunk<
   { rejectValue: string }
 >("auth/submitRegistration", async (payload, { rejectWithValue }) => {
   try {
-    return await authApi.register(payload);
+    const response = await authApi.register(payload);
+    persistAuth(response);
+    return response;
   } catch (error) {
     if (error instanceof ApiError) {
       return rejectWithValue(error.message);
@@ -70,6 +146,7 @@ const authSlice = createSlice({
     openLoginModal(state) {
       state.modalOpen = true;
       state.mode = "login";
+      state.status = "idle";
       state.error = null;
     },
     closeLoginModal(state) {
@@ -84,6 +161,13 @@ const authSlice = createSlice({
     clearAuthError(state) {
       state.error = null;
     },
+    logout(state) {
+      state.user = null;
+      state.token = null;
+      state.status = "idle";
+      state.error = null;
+      persistAuth(null);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -91,9 +175,12 @@ const authSlice = createSlice({
         state.status = "submitting";
         state.error = null;
       })
-      .addCase(submitLogin.fulfilled, (state) => {
+      .addCase(submitLogin.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.modalOpen = false;
+        state.error = null;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
       })
       .addCase(submitLogin.rejected, (state, action) => {
         state.status = "failed";
@@ -103,9 +190,12 @@ const authSlice = createSlice({
         state.status = "submitting";
         state.error = null;
       })
-      .addCase(submitRegistration.fulfilled, (state) => {
+      .addCase(submitRegistration.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.modalOpen = false;
+        state.error = null;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
       })
       .addCase(submitRegistration.rejected, (state, action) => {
         state.status = "failed";
@@ -115,6 +205,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { openLoginModal, closeLoginModal, setAuthMode, clearAuthError } =
+export const { openLoginModal, closeLoginModal, setAuthMode, clearAuthError, logout } =
   authSlice.actions;
 export const authReducer = authSlice.reducer;

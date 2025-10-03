@@ -6,7 +6,10 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "client:dev": "pnpm --filter app-ui run dev"
+    "client:dev": "pnpm --filter app-ui run dev",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "packageManager": "pnpm@10.17.1"
 }

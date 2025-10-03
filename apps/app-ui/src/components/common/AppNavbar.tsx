@@ -1,10 +1,12 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Layout, Space, theme } from "antd";
+import { Avatar, Button, Dropdown, Layout, Space, Typography, theme } from "antd";
+import type { MenuProps } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { openLoginModal } from "../../features/auth/authSlice";
-import { useAppDispatch } from "../../store/hooks";
+import { logout, openLoginModal } from "../../features/auth/authSlice";
+import { selectAuthUser } from "../../features/auth/selectors";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -14,6 +16,8 @@ export const AppNavbar: FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const user = useAppSelector(selectAuthUser);
+  const isAuthenticated = Boolean(user);
   const { token } = theme.useToken();
 
   const showBackButton = location.pathname !== "/";
@@ -42,9 +46,59 @@ export const AppNavbar: FC = () => {
     [token.colorWarning],
   );
 
+  const userButtonStyle = useMemo<CSSProperties>(
+    () => ({
+      paddingInline: 8,
+      paddingBlock: 4,
+      height: "auto",
+    }),
+    [],
+  );
+
+  const displayName = useMemo(
+    () => user?.firstName ?? user?.username ?? "Account",
+    [user],
+  );
+
+  const avatarLabel = useMemo(() => {
+    if (!user) {
+      return "?";
+    }
+
+    const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.trim();
+    if (initials) {
+      return initials.toUpperCase();
+    }
+
+    return (user.username?.[0] ?? "?").toUpperCase();
+  }, [user]);
+
   const handleLoginClick = useCallback(() => {
     dispatch(openLoginModal());
   }, [dispatch]);
+
+  const handleLogout = useCallback(() => {
+    dispatch(logout());
+  }, [dispatch]);
+
+  const handleMenuClick = useCallback(
+    ({ key }: { key: string }) => {
+      if (key === "logout") {
+        handleLogout();
+      }
+    },
+    [handleLogout],
+  );
+
+  const userMenuItems = useMemo<MenuProps["items"]>(
+    () => [
+      {
+        key: "logout",
+        label: "Sign out",
+      },
+    ],
+    [],
+  );
 
   return (
     <Header style={headerStyle}>
@@ -62,11 +116,38 @@ export const AppNavbar: FC = () => {
       </div>
       <Space size="middle" align="center">
         <EnvironmentSwitcher />
-        <Button type="default" onClick={handleLoginClick}>
-          Log in
-        </Button>
+        {isAuthenticated ? (
+          <Dropdown
+            menu={{ items: userMenuItems, onClick: handleMenuClick }}
+            trigger={["click"]}
+            placement="bottomRight"
+          >
+            <Button type="text" style={userButtonStyle}>
+              <Space size={8} align="center">
+                <Avatar
+                  size="small"
+                  style={{
+                    backgroundColor: token.colorPrimary,
+                    color: "#ffffff",
+                    fontWeight: 600,
+                  }}
+                >
+                  {avatarLabel}
+                </Avatar>
+                <Typography.Text strong style={{ color: token.colorText }}>
+                  {displayName}
+                </Typography.Text>
+              </Space>
+            </Button>
+          </Dropdown>
+        ) : (
+          <Button type="default" onClick={handleLoginClick}>
+            Log in
+          </Button>
+        )}
         <ThemeToggle />
       </Space>
     </Header>
   );
 };
+

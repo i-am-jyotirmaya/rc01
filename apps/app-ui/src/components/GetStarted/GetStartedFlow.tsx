@@ -1,10 +1,13 @@
 import { Form, Input, Space, Typography, Button, message, theme } from "antd";
 import type { FC } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HeroIconKey } from "../../features/arena/arenaSlice";
 import { AppModal } from "../common/AppModal";
 import { IconFactory } from "../common/IconFactory";
+import { openLoginModal } from "../../features/auth/authSlice";
+import { selectIsAuthModalOpen, selectIsAuthenticated } from "../../features/auth/selectors";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 
 interface GetStartedFlowProps {
   label: string;
@@ -17,6 +20,10 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [joinForm] = Form.useForm<{ inviteLink: string }>();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isAuthModalOpen = useAppSelector(selectIsAuthModalOpen);
+  const [launchAfterAuth, setLaunchAfterAuth] = useState(false);
   const { token } = theme.useToken();
 
   const helperTextStyle = useMemo(
@@ -46,13 +53,37 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
     navigate("/host");
   }, [closeModal, navigate]);
 
+  const handlePrimaryClick = useCallback(() => {
+    if (!isAuthenticated) {
+      setLaunchAfterAuth(true);
+      dispatch(openLoginModal());
+      message.info("Please log in to continue.");
+      return;
+    }
+
+    setIsModalOpen(true);
+  }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    if (launchAfterAuth && isAuthenticated) {
+      setIsModalOpen(true);
+      setLaunchAfterAuth(false);
+    }
+  }, [isAuthenticated, launchAfterAuth]);
+
+  useEffect(() => {
+    if (!isAuthModalOpen && !isAuthenticated && launchAfterAuth) {
+      setLaunchAfterAuth(false);
+    }
+  }, [isAuthModalOpen, isAuthenticated, launchAfterAuth]);
+
   return (
     <>
       <Button
         type="primary"
         size="large"
         icon={<IconFactory icon={icon} />}
-        onClick={() => setIsModalOpen(true)}
+        onClick={handlePrimaryClick}
       >
         {label}
       </Button>
@@ -99,3 +130,4 @@ export const GetStartedFlow: FC<GetStartedFlowProps> = ({ label, icon }) => {
     </>
   );
 };
+

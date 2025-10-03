@@ -1,5 +1,5 @@
 import { UploadOutlined } from "@ant-design/icons";
-import { Alert, Button, Form, Input, Space, Typography, Upload } from "antd";
+import { Alert, Button, Form, Input, Space, Typography, Upload, theme } from "antd";
 import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -57,6 +57,7 @@ export const AuthModal: FC = () => {
   const status = useAppSelector(selectAuthStatus);
   const error = useAppSelector(selectAuthError);
   const isSubmitting = status === "submitting";
+  const { token } = theme.useToken();
 
   useEffect(() => {
     if (!open) {
@@ -123,6 +124,16 @@ export const AuthModal: FC = () => {
               : "Share a few quick details to set up your arena profile."}
           </Typography.Text>
         </div>
+
+        <Typography.Paragraph
+          style={{
+            marginBottom: 0,
+            color: token.colorTextQuaternary,
+            fontSize: token.fontSizeSM,
+          }}
+        >
+          Heads-up: your account information stays on this device; we keep it local.
+        </Typography.Paragraph>
 
         {error ? <Alert type="error" message={error} showIcon /> : null}
 
@@ -318,3 +329,4 @@ export const AuthModal: FC = () => {
     </AppModal>
   );
 };
+

@@ -6,7 +6,7 @@ import {
   updateBattleHandler,
 } from '../controllers/battleController';
 
-export const battleRouter = Router();
+export const battleRouter: Router = Router();
 
 battleRouter.get('/', listBattlesHandler);
 battleRouter.post('/', createBattleHandler);

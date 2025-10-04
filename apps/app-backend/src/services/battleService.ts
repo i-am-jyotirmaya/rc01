@@ -57,7 +57,7 @@ const toBattleRecord = (row: DbBattleRow): BattleRecord => ({
 class BattleScheduler {
   private timers = new Map<string, NodeJS.Timeout>();
 
-  schedule(row: DbBattleRow, start: (battleId: string) => Promise<void>): void {
+  schedule(row: DbBattleRow, start: (battleId: string) => Promise<BattleRecord | void>): void {
     if (!row.scheduled_start_at) {
       this.cancel(row.id);
       return;
@@ -87,7 +87,7 @@ class BattleScheduler {
     }
   }
 
-  async restore(start: (battleId: string) => Promise<void>): Promise<void> {
+  async restore(start: (battleId: string) => Promise<BattleRecord | void>): Promise<void> {
     const scheduledBattles = await listScheduledBattles();
     scheduledBattles.forEach((battle) => {
       this.schedule(battle, start);

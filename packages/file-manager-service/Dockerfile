@@ -21,6 +21,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY --from=base /app/node_modules ./node_modules
 COPY packages/file-manager-service/package.json ./packages/file-manager-service/package.json
 COPY --from=base /app/packages/file-manager-service/dist ./packages/file-manager-service/dist
+COPY --from=base /app/packages/file-manager-service/node_modules ./packages/file-manager-service/node_modules
 
 ENV NODE_ENV=production
 ENV FILE_MANAGER_PORT=4100

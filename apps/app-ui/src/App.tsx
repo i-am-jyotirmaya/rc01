@@ -7,6 +7,7 @@ import { AppNavbar } from "./components/common/AppNavbar";
 import { HeroSection } from "./components/Hero/HeroSection";
 import { useThemeMode } from "./providers/theme-mode-context";
 import { HostBattlePage } from "./pages/host-battle";
+import { AdminBattleConfigPage } from "./pages/admin/battles";
 
 const App: FC = () => {
   const { token } = theme.useToken();
@@ -40,6 +41,7 @@ const App: FC = () => {
       <Routes>
         <Route path="/" element={<HeroSection />} />
         <Route path="/host" element={<HostBattlePage />} />
+        <Route path="/admin/battles/:battleId/config" element={<AdminBattleConfigPage />} />
       </Routes>
       <AuthModal />
     </Layout>

@@ -1,26 +1,48 @@
-import fs from 'node:fs/promises';
 import { Dirent } from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { resolveProblemPath, sanitizeSlug } from '../utils/files';
+
+const ensureSlug = (value: string): string => {
+  const sanitized = sanitizeSlug(value);
+  if (!sanitized) {
+    throw new Error('Problem slug cannot be empty after sanitization');
+  }
+
+  return sanitized;
+};
+
+export const createProblemSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required'),
+  slug: z
+    .string()
+    .trim()
+    .min(1, 'Slug is required')
+    .transform((value) => sanitizeSlug(value))
+    .refine((value) => value.length > 0, {
+      message: 'Slug must contain at least one alphanumeric character',
+    })
+    .optional(),
+  content: z.string().min(1, 'Problem content is required'),
+});
+
+export type CreateProblemInput = z.infer<typeof createProblemSchema>;
 
 export type ProblemMetadata = {
   slug: string;
   filename: string;
   updatedAt: string;
+  hash: string;
 };
 
-const createProblemSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  slug: z
-    .string()
-    .optional()
-    .transform((value) => (value ? sanitizeSlug(value) : undefined)),
-  content: z.string().min(1, 'Problem content is required'),
-});
+export type ProblemRecord = ProblemMetadata & { content: string };
 
-export type CreateProblemInput = z.infer<typeof createProblemSchema>;
+const calculateHash = (payload: string | Buffer): string => {
+  return createHash('sha256').update(payload).digest('hex');
+};
 
 export class ProblemStore {
   constructor(private readonly storageRoot: string) {}
@@ -34,12 +56,16 @@ export class ProblemStore {
       markdownFiles.map(async (entry: Dirent): Promise<ProblemMetadata> => {
         const slug = path.basename(entry.name, '.md');
         const filePath = path.join(this.storageRoot, entry.name);
-        const info = await fs.stat(filePath);
+        const [info, buffer] = await Promise.all([
+          fs.stat(filePath),
+          fs.readFile(filePath),
+        ]);
 
         return {
           slug,
           filename: entry.name,
           updatedAt: info.mtime.toISOString(),
+          hash: calculateHash(buffer),
         } satisfies ProblemMetadata;
       }),
     );
@@ -49,35 +75,45 @@ export class ProblemStore {
     return stats;
   }
 
-  async read(slug: string): Promise<{ slug: string; content: string }> {
-    const sanitized = sanitizeSlug(slug);
+  async read(slug: string): Promise<ProblemRecord> {
+    const sanitized = ensureSlug(slug);
     const filePath = resolveProblemPath(this.storageRoot, sanitized);
-    const buffer = await fs.readFile(filePath);
+    const [buffer, stats] = await Promise.all([
+      fs.readFile(filePath),
+      fs.stat(filePath),
+    ]);
+    const content = buffer.toString('utf-8');
 
     return {
       slug: sanitized,
-      content: buffer.toString('utf-8'),
+      filename: path.basename(filePath),
+      updatedAt: stats.mtime.toISOString(),
+      content,
+      hash: calculateHash(buffer),
     };
   }
 
-  async save(input: CreateProblemInput): Promise<ProblemMetadata & { content: string }> {
-    const parsed = createProblemSchema.parse(input);
-    const slug = parsed.slug ?? sanitizeSlug(parsed.title);
-    if (!slug) {
-      throw new Error('Problem slug cannot be empty after sanitization');
-    }
+  async save(input: CreateProblemInput): Promise<ProblemRecord> {
+    const slug = ensureSlug(input.slug ?? input.title);
 
     const filename = `${slug}.md`;
     const filePath = resolveProblemPath(this.storageRoot, slug);
 
-    await fs.writeFile(filePath, parsed.content, 'utf-8');
+    await fs.writeFile(filePath, input.content, 'utf-8');
     const stats = await fs.stat(filePath);
 
     return {
       slug,
       filename,
       updatedAt: stats.mtime.toISOString(),
-      content: parsed.content,
+      content: input.content,
+      hash: calculateHash(input.content),
     };
+  }
+
+  async delete(slug: string): Promise<void> {
+    const sanitized = ensureSlug(slug);
+    const filePath = resolveProblemPath(this.storageRoot, sanitized);
+    await fs.unlink(filePath);
   }
 }

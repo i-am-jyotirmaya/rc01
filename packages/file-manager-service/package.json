@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -b tsconfig.build.json",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -26,6 +27,9 @@
     "@types/node": "^20.17.12",
     "ts-node-dev": "^2.0.0",
     "typescript": "~5.8.3",
-    "@types/http-errors": "^2.0.4"
+    "@types/http-errors": "^2.0.4",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
   }
 }

@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import createHttpError from 'http-errors';
 import { v4 as uuid } from 'uuid';
 import {
@@ -6,9 +7,14 @@ import {
   updateBattleById,
   findBattleById,
   listScheduledBattles,
+  insertBattleParticipant,
+  findBattleParticipant,
+  findBattleParticipantByRole,
   type BattleStatus,
   type DbBattleRow,
   type UpdateBattlePayload,
+  type DbBattleParticipantRow,
+  type BattleParticipantRole,
 } from '@codebattle/db';
 import { logger } from '../utils/logger';
 
@@ -27,6 +33,21 @@ export type BattleRecord = {
   updatedAt: string;
 };
 
+export type BattleParticipantRecord = {
+  id: string;
+  battleId: string;
+  userId: string;
+  role: BattleParticipantRole;
+  joinedAt: string;
+};
+
+type BattleEventMap = {
+  'battle.lobby-opened': [BattleRecord];
+  'battle.participant-joined': [{ battleId: string; participant: BattleParticipantRecord }];
+};
+
+export const battleEvents = new EventEmitter<BattleEventMap>();
+
 export type CreateBattleInput = {
   name: string;
   shortDescription?: string | null;
@@ -39,7 +60,31 @@ export type UpdateBattleInput = Partial<CreateBattleInput> & {
   status?: BattleStatus;
 };
 
+export type JoinBattleInput = {
+  battleId: string;
+  userId: string;
+  role?: BattleParticipantRole;
+};
+
+export type JoinBattleResult = {
+  participant: BattleParticipantRecord;
+  wasCreated: boolean;
+};
+
 const CONFIGURABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled'];
+const DEFAULT_PARTICIPANT_ROLE: BattleParticipantRole = 'player';
+const PLAYER_JOINABLE_STATUSES: BattleStatus[] = ['lobby', 'active'];
+const ADMIN_JOINABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled', 'lobby', 'active'];
+
+const normalizeParticipantRole = (role?: BattleParticipantRole): BattleParticipantRole => role ?? DEFAULT_PARTICIPANT_ROLE;
+
+const canRoleJoinBattle = (status: BattleStatus, role: BattleParticipantRole): boolean => {
+  if (role === 'host') {
+    return ADMIN_JOINABLE_STATUSES.includes(status);
+  }
+
+  return PLAYER_JOINABLE_STATUSES.includes(status);
+};
 
 const toBattleRecord = (row: DbBattleRow): BattleRecord => ({
   id: row.id,
@@ -52,6 +97,14 @@ const toBattleRecord = (row: DbBattleRow): BattleRecord => ({
   startedAt: row.started_at ? row.started_at.toISOString() : null,
   createdAt: row.created_at.toISOString(),
   updatedAt: row.updated_at.toISOString(),
+});
+
+const toBattleParticipantRecord = (row: DbBattleParticipantRow): BattleParticipantRecord => ({
+  id: row.id,
+  battleId: row.battle_id,
+  userId: row.user_id,
+  role: row.role,
+  joinedAt: row.created_at.toISOString(),
 });
 
 class BattleScheduler {
@@ -233,7 +286,7 @@ export const createBattle = async (input: CreateBattleInput): Promise<BattleReco
     startedAt: plan.startedAt,
   });
 
-  if (plan.status === 'scheduled') {
+  if (created.auto_start && created.scheduled_start_at) {
     scheduler.schedule(created, (battleIdToStart) => startBattle(battleIdToStart));
   }
 
@@ -248,6 +301,10 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
 
   if (!CONFIGURABLE_STATUSES.includes(existing.status)) {
     throw createHttpError(409, `Battles in status "${existing.status}" cannot be configured`);
+  }
+
+  if (input.status === 'lobby' && existing.status !== 'ready' && existing.status !== 'scheduled') {
+    throw createHttpError(409, `Battles in status "${existing.status}" cannot enter the lobby`);
   }
 
   const startMode = input.startMode ?? (existing.auto_start ? 'scheduled' : 'manual');
@@ -285,13 +342,60 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
     throw createHttpError(404, 'Battle not found');
   }
 
-  if (plan.status === 'scheduled') {
+  if (updated.auto_start && updated.scheduled_start_at) {
     scheduler.schedule(updated, (battleIdToStart) => startBattle(battleIdToStart));
   } else {
     scheduler.cancel(id);
   }
 
-  return toBattleRecord(updated);
+  const record = toBattleRecord(updated);
+
+  if (record.status === 'lobby') {
+    battleEvents.emit('battle.lobby-opened', record);
+  }
+
+  return record;
+};
+
+export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResult> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  const normalizedRole = normalizeParticipantRole(input.role);
+  const existingParticipant = await findBattleParticipant(input.battleId, input.userId);
+
+  if (existingParticipant) {
+    return {
+      participant: toBattleParticipantRecord(existingParticipant),
+      wasCreated: false,
+    };
+  }
+
+  if (!canRoleJoinBattle(battle.status, normalizedRole)) {
+    const suffix = normalizedRole === 'host' ? ' as host' : '';
+    throw createHttpError(409, `Battle cannot be joined while in status "${battle.status}"${suffix}`);
+  }
+
+  if (normalizedRole === 'host') {
+    const existingHost = await findBattleParticipantByRole(input.battleId, 'host');
+    if (existingHost && existingHost.user_id !== input.userId) {
+      throw createHttpError(409, 'Battle already has a host assigned');
+    }
+  }
+
+  const participantRow = await insertBattleParticipant({
+    id: uuid(),
+    battleId: input.battleId,
+    userId: input.userId,
+    role: normalizedRole,
+  });
+
+  const participant = toBattleParticipantRecord(participantRow);
+  battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
+
+  return { participant, wasCreated: true };
 };
 
 export const startBattle = async (id: string): Promise<BattleRecord> => {
@@ -300,7 +404,7 @@ export const startBattle = async (id: string): Promise<BattleRecord> => {
     throw createHttpError(404, 'Battle not found');
   }
 
-  if (existing.status !== 'ready' && existing.status !== 'scheduled') {
+  if (existing.status !== 'ready' && existing.status !== 'scheduled' && existing.status !== 'lobby') {
     throw createHttpError(409, `Battle cannot be started from status "${existing.status}"`);
   }
 

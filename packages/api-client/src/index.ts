@@ -291,6 +291,7 @@ export class AuthApi {
 export type BattleStatus =
   | 'draft'
   | 'configuring'
+  | 'lobby'
   | 'ready'
   | 'scheduled'
   | 'active'
@@ -310,6 +311,16 @@ export interface BattleRecord {
   startedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type BattleParticipantRole = 'host' | 'player' | 'spectator';
+
+export interface BattleParticipantRecord {
+  id: string;
+  battleId: string;
+  userId: string;
+  role: BattleParticipantRole;
+  joinedAt: string;
 }
 
 export interface CreateBattleRequestPayload {
@@ -335,6 +346,15 @@ export interface BattleResponsePayload {
 
 export interface ListBattlesResponsePayload {
   battles: BattleRecord[];
+}
+
+export interface JoinBattleRequestPayload {
+  role?: BattleParticipantRole;
+}
+
+export interface JoinBattleResponsePayload {
+  participant: BattleParticipantRecord;
+  wasCreated: boolean;
 }
 
 interface BattleRoutesConfig {
@@ -366,6 +386,10 @@ export class BattleApi {
 
   startBattle(battleId: string) {
     return this.client.post<BattleResponsePayload>(`${this.routes.base}/${battleId}/start`);
+  }
+
+  joinBattle(battleId: string, payload: JoinBattleRequestPayload = {}) {
+    return this.client.post<JoinBattleResponsePayload>(`${this.routes.base}/${battleId}/join`, payload);
   }
 }
 

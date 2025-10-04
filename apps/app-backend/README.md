@@ -78,6 +78,14 @@ See the [Docker](#docker) section for more details.
 - `POST /api/auth/register` — Create a new user. Accepts `multipart/form-data` with fields `username`, `firstName`, `lastName`, `password`, and a `photo` file. Returns the created user and a JWT token.
 - `POST /api/auth/login` — Authenticate an existing user with `username` and `password` (JSON body). Returns the user profile and a JWT token.
 
+### Battles
+
+- `GET /api/battles` — List all battles with their configuration, status, and scheduling metadata.
+- `POST /api/battles` — Create a new battle in the `draft` state.
+- `PATCH /api/battles/:battleId` — Update battle metadata. When a battle transitions to the `lobby` state its configuration becomes read-only.
+- `POST /api/battles/:battleId/start` — Manually start a battle that is `ready`, `scheduled`, or already in the `lobby`.
+- `POST /api/battles/:battleId/join` — Authenticated endpoint that lets hosts or players join a battle lobby. Hosts may pre-register before the lobby opens; players are admitted once the battle reaches the `lobby` state.
+
 ### Coming Soon
 
 - 🔒 Role-based access control for administrative actions.

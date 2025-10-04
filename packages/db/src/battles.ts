@@ -4,6 +4,7 @@ import { getPool } from './index';
 export type BattleStatus =
   | 'draft'
   | 'configuring'
+  | 'lobby'
   | 'scheduled'
   | 'ready'
   | 'active'
@@ -119,7 +120,7 @@ export const listScheduledBattles = async (): Promise<DbBattleRow[]> => {
     `
       SELECT *
       FROM battles
-      WHERE status = 'scheduled'
+      WHERE auto_start = TRUE AND scheduled_start_at IS NOT NULL AND status IN ('scheduled', 'lobby')
       ORDER BY scheduled_start_at ASC NULLS LAST
     `,
   );

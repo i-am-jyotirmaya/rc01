@@ -1,9 +1,11 @@
-import { Alert, Col, Layout, Result, Row, Skeleton, Space, Typography } from "antd";
+import { Alert, Col, Layout, Result, Row, Skeleton, Space, Tabs, Typography } from "antd";
+import type { TabsProps } from "antd";
 import type { FC } from "react";
 import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 
 import { BattleConfigDetailsCard } from "./components/BattleConfigDetailsCard";
+import { BattleConfigAdvancedCard } from "./components/BattleConfigAdvancedCard";
 import { BattleConfigSummaryCard } from "./components/BattleConfigSummaryCard";
 import { BattleProblemSelectionCard } from "./components/BattleProblemSelectionCard";
 import { useAvailableProblemsCatalog } from "./hooks/useAvailableProblemsCatalog";
@@ -66,11 +68,22 @@ export const AdminBattleConfigPage: FC = () => {
       return <Skeleton active avatar paragraph={{ rows: 12 }} />;
     }
 
-    return (
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={14} xl={16}>
+    const tabItems: TabsProps["items"] = [
+      {
+        key: "basics",
+        label: "Battle basics",
+        children: <BattleConfigDetailsCard draft={draft} onChange={updateDraft} />,
+      },
+      {
+        key: "advanced",
+        label: "Advanced settings",
+        children: <BattleConfigAdvancedCard draft={draft} onChange={updateDraft} />,
+      },
+      {
+        key: "problems",
+        label: "Problem catalog",
+        children: (
           <Space direction="vertical" style={{ width: "100%" }} size="large">
-            <BattleConfigDetailsCard draft={draft} onChange={updateDraft} />
             <BattleProblemSelectionCard
               draft={draft}
               availableProblems={catalog}
@@ -87,6 +100,14 @@ export const AdminBattleConfigPage: FC = () => {
               />
             ) : null}
           </Space>
+        ),
+      },
+    ];
+
+    return (
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={14} xl={16}>
+          <Tabs defaultActiveKey="basics" items={tabItems} />
         </Col>
         <Col xs={24} lg={10} xl={8}>
           <BattleConfigSummaryCard

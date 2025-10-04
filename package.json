@@ -7,6 +7,8 @@
   "license": "ISC",
   "scripts": {
     "client:dev": "pnpm --filter app-ui run dev",
+    "server:dev": "pnpm --filter app-backend run dev",
+    "fileman:dev": "pnpm --filter file-manager-service run dev",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"

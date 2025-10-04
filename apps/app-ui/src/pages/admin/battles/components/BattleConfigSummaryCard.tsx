@@ -36,13 +36,59 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
     <Card title="Configuration status" extra={<Badge status="processing" text={draft.status} />}> 
       <Descriptions column={1} size="small" bordered>
         <Descriptions.Item label="Battle name">{draft.name || "Untitled battle"}</Descriptions.Item>
+        <Descriptions.Item label="Game mode">
+          {draft.gameMode ? (
+            draft.gameMode
+          ) : (
+            <Typography.Text type="secondary">Select a mode</Typography.Text>
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Difficulty">
+          {draft.difficulty ? (
+            draft.difficulty
+          ) : (
+            <Typography.Text type="secondary">Set difficulty</Typography.Text>
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Max players">
+          {typeof draft.maxPlayers === "number" ? (
+            draft.maxPlayers
+          ) : (
+            <Typography.Text type="secondary">Define a cap</Typography.Text>
+          )}
+        </Descriptions.Item>
         <Descriptions.Item label="Start mode">{draft.startMode}</Descriptions.Item>
         <Descriptions.Item label="Scheduled start">{scheduleLabel}</Descriptions.Item>
+        <Descriptions.Item label="Privacy">
+          <Space size="small">
+            <Typography.Text>{draft.privacy === "invite" ? "Invite only" : "Public"}</Typography.Text>
+            {draft.privacy === "invite" && draft.password ? (
+              <Tag color="gold">Password protected</Tag>
+            ) : null}
+          </Space>
+        </Descriptions.Item>
         <Descriptions.Item label="Spectators">
           {draft.allowSpectators ? "Allowed" : "Restricted"}
         </Descriptions.Item>
         <Descriptions.Item label="Team balancing">
           {draft.teamBalancing ? "Automatic" : "Manual"}
+        </Descriptions.Item>
+        <Descriptions.Item label="Rating range">
+          {typeof draft.ratingFloor === "number" || typeof draft.ratingCeiling === "number" ? (
+            <Typography.Text>
+              {typeof draft.ratingFloor === "number" ? draft.ratingFloor : "–"} –
+              {typeof draft.ratingCeiling === "number" ? draft.ratingCeiling : "–"}
+            </Typography.Text>
+          ) : (
+            <Typography.Text type="secondary">No rating filters</Typography.Text>
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Join queue limit">
+          {typeof draft.joinQueueSize === "number" ? (
+            draft.joinQueueSize
+          ) : (
+            <Typography.Text type="secondary">Unlimited</Typography.Text>
+          )}
         </Descriptions.Item>
         <Descriptions.Item label="Languages">
           <Space wrap>
@@ -53,6 +99,16 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
             )}
           </Space>
         </Descriptions.Item>
+        <Descriptions.Item label="Power-ups">
+          <Space wrap>
+            {draft.powerUps.length ? (
+              draft.powerUps.map((powerUp) => <Tag key={powerUp}>{powerUp}</Tag>)
+            ) : (
+              <Typography.Text type="secondary">No power-ups enabled</Typography.Text>
+            )}
+          </Space>
+        </Descriptions.Item>
+        <Descriptions.Item label="Rematch defaults">{draft.rematchDefaults ? "Enabled" : "Disabled"}</Descriptions.Item>
         <Descriptions.Item label="Problems">
           <Space direction="vertical">
             {draft.problems.map((problem) => (

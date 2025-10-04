@@ -13,6 +13,10 @@ export interface BattleConfigDraft {
   name: string;
   status: BattleConfigStatus;
   shortDescription: string;
+  gameMode?: string;
+  difficulty?: string;
+  maxPlayers?: number | null;
+  privacy: "public" | "invite";
   startMode: "manual" | "scheduled";
   scheduledStartAt?: string | null;
   allowSpectators: boolean;
@@ -21,6 +25,19 @@ export interface BattleConfigDraft {
   problems: BattleProblemSummary[];
   primaryLanguagePool: string[];
   notes?: string;
+  turnTimeLimit?: number | null;
+  totalDuration?: number | null;
+  scoringRules?: string;
+  tieBreakPreference?: string;
+  powerUps: string[];
+  ratingFloor?: number | null;
+  ratingCeiling?: number | null;
+  moderatorRoles: string[];
+  preloadedResources?: string;
+  rematchDefaults: boolean;
+  joinQueueSize?: number | null;
+  password?: string;
+  linkExpiry?: string;
 }
 
 export interface ProblemCatalogEntry extends BattleProblemSummary {

@@ -7,18 +7,38 @@ interface UseBattleConfigDraftArgs {
   battleId: string;
 }
 
-interface DraftUpdate {
-  name?: string;
-  shortDescription?: string;
-  status?: BattleConfigStatus;
-  startMode?: BattleConfigDraft["startMode"];
-  scheduledStartAt?: BattleConfigDraft["scheduledStartAt"];
-  allowSpectators?: boolean;
-  voiceChat?: boolean;
-  teamBalancing?: boolean;
-  primaryLanguagePool?: string[];
-  notes?: string;
-}
+type DraftUpdate = Partial<
+  Pick<
+    BattleConfigDraft,
+    |
+      "name"
+      | "shortDescription"
+      | "gameMode"
+      | "difficulty"
+      | "maxPlayers"
+      | "privacy"
+      | "startMode"
+      | "scheduledStartAt"
+      | "allowSpectators"
+      | "voiceChat"
+      | "teamBalancing"
+      | "primaryLanguagePool"
+      | "notes"
+      | "turnTimeLimit"
+      | "totalDuration"
+      | "scoringRules"
+      | "tieBreakPreference"
+      | "powerUps"
+      | "ratingFloor"
+      | "ratingCeiling"
+      | "moderatorRoles"
+      | "preloadedResources"
+      | "rematchDefaults"
+      | "joinQueueSize"
+      | "password"
+      | "linkExpiry"
+  >
+> & { status?: BattleConfigStatus };
 
 export interface UseBattleConfigDraftResult {
   draft: BattleConfigDraft | null;
@@ -37,6 +57,10 @@ const initialStub: BattleConfigDraft = {
   name: "",
   status: "draft",
   shortDescription: "",
+  gameMode: undefined,
+  difficulty: undefined,
+  maxPlayers: null,
+  privacy: "public",
   startMode: "manual",
   scheduledStartAt: null,
   allowSpectators: true,
@@ -45,6 +69,19 @@ const initialStub: BattleConfigDraft = {
   problems: [],
   primaryLanguagePool: ["typescript"],
   notes: undefined,
+  turnTimeLimit: null,
+  totalDuration: null,
+  scoringRules: undefined,
+  tieBreakPreference: undefined,
+  powerUps: [],
+  ratingFloor: null,
+  ratingCeiling: null,
+  moderatorRoles: [],
+  preloadedResources: undefined,
+  rematchDefaults: false,
+  joinQueueSize: null,
+  password: undefined,
+  linkExpiry: undefined,
 };
 
 export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): UseBattleConfigDraftResult => {
@@ -69,8 +106,15 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
           status: "configuring",
           shortDescription:
             "Stage the invitational bracket, confirm participants, and lock in curated problem sets before kickoff.",
+          gameMode: "head-to-head",
+          difficulty: "intermediate",
+          maxPlayers: 16,
+          privacy: "invite",
           startMode: "scheduled",
           scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+          allowSpectators: true,
+          voiceChat: true,
+          teamBalancing: true,
           problems: [
             {
               id: "sample-problem-1",
@@ -82,6 +126,19 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
           ],
           primaryLanguagePool: ["typescript", "python", "rust"],
           notes: "Confirm streaming overlays before publishing battle lobby.",
+          turnTimeLimit: 45,
+          totalDuration: 120,
+          scoringRules: "points-per-challenge",
+          tieBreakPreference: "fastest-submission",
+          powerUps: ["double-points"],
+          ratingFloor: 1200,
+          ratingCeiling: 2800,
+          moderatorRoles: ["judge", "streamer"],
+          preloadedResources: "starter-template",
+          rematchDefaults: true,
+          joinQueueSize: 25,
+          password: "invitational-2025",
+          linkExpiry: "7d",
         };
 
         if (!isMounted) {

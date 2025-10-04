@@ -18,6 +18,10 @@ export const getPool = (): Pool => {
   return pool;
 };
 
+export const setPool = (customPool: Pool | null): void => {
+  pool = customPool;
+};
+
 export const closeDb = async (): Promise<void> => {
   if (pool) {
     await pool.end();
@@ -56,13 +60,27 @@ export const runCoreMigrations = async (): Promise<void> => {
         started_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CHECK (status IN ('draft', 'configuring', 'scheduled', 'ready', 'active', 'completed', 'cancelled'))
+        CHECK (status IN ('draft', 'configuring', 'scheduled', 'ready', 'lobby', 'active', 'completed', 'cancelled'))
       );
     `);
 
     await client.query('CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);');
     await client.query(
       'CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at) WHERE scheduled_start_at IS NOT NULL;',
+    );
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS battle_participants (
+        id UUID PRIMARY KEY,
+        battle_id UUID NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(16) NOT NULL DEFAULT 'player',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CHECK (role IN ('host', 'player', 'spectator')),
+        UNIQUE (battle_id, user_id)
+      );
+    `);
+    await client.query(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_host ON battle_participants (battle_id) WHERE role = 'host';",
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -75,3 +93,4 @@ export const runCoreMigrations = async (): Promise<void> => {
 
 export * from './users';
 export * from './battles';
+export * from './battleParticipants';

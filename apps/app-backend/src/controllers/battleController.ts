@@ -1,8 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
+import createHttpError from 'http-errors';
 import { z } from 'zod';
 import {
   createBattle,
   getBattles,
+  joinBattle,
   startBattle,
   updateBattle,
   type BattleStartMode,
@@ -10,7 +12,9 @@ import {
 
 const startModeSchema = z.enum(['manual', 'scheduled']);
 
-const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled']);
+const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled', 'lobby']);
+
+const participantRoleSchema = z.enum(['host', 'player', 'spectator']);
 
 const createBattleSchema = z
   .object({
@@ -48,6 +52,12 @@ const updateBattleSchema = z
       });
     }
   });
+
+const joinBattleSchema = z
+  .object({
+    role: participantRoleSchema.optional(),
+  })
+  .strict();
 
 const parseStartDate = (value: string | null | undefined): Date | null | undefined => {
   if (value === undefined) {
@@ -118,6 +128,26 @@ export const startBattleHandler = async (req: Request, res: Response, next: Next
   try {
     const battle = await startBattle(req.params.battleId);
     res.json({ battle });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const joinBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const payload = joinBattleSchema.parse(req.body ?? {});
+    const result = await joinBattle({
+      battleId: req.params.battleId,
+      userId: req.user.id,
+      role: payload.role,
+    });
+
+    const statusCode = result.wasCreated ? 201 : 200;
+    res.status(statusCode).json({ participant: result.participant, wasCreated: result.wasCreated });
   } catch (error) {
     next(error);
   }

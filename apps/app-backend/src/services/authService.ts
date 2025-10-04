@@ -38,7 +38,7 @@ export type AuthResponse = {
   user: PublicUser;
 };
 
-const toPublicUser = (user: DbUserRow): PublicUser => ({
+export const toPublicUser = (user: DbUserRow): PublicUser => ({
   id: user.id,
   username: user.username,
   firstName: user.first_name,

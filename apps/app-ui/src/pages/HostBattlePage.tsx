@@ -64,6 +64,7 @@ const statusMeta: Record<BattleStatus, { label: string; color: string }> = {
   configuring: { label: "Configuring", color: "gold" },
   ready: { label: "Ready", color: "green" },
   scheduled: { label: "Scheduled", color: "blue" },
+  lobby: { label: "Lobby", color: "cyan" },
   active: { label: "Active", color: "purple" },
   completed: { label: "Completed", color: "default" },
   cancelled: { label: "Cancelled", color: "red" },

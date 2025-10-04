@@ -22,6 +22,8 @@ Dedicated HTTP service responsible for storing and retrieving Markdown-based cod
 
 Set these values in your shell or Docker Compose file before starting the service.
 
+For local development, copy the repository-level `.env.example` to `.env`, choose a strong value for `FILE_MANAGER_ADMIN_TOKEN`, and make sure any admin client sends that token in the `x-admin-token` header.
+
 ## Commands
 
 | Command | Description |

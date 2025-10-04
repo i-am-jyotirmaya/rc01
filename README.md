@@ -70,6 +70,7 @@ The monorepo now includes a dedicated File Manager HTTP service responsible for 
 - Configurable storage root via the `PROBLEM_STORAGE_ROOT` environment variable.
 - Enforced payload limits (`FILE_MANAGER_MAX_SIZE_MB`) to prevent oversized uploads.
 - Docker Compose integration with a persistent `problem_markdown_data` volume shared with the backend.
+- Routes are protected by the `FILE_MANAGER_ADMIN_TOKEN` shared secret—copy `.env.example` to `.env` and update the token before bringing services up.
 
 > The service lives under [`packages/file-manager-service`](packages/file-manager-service) and ships with a Dockerfile so it can run alongside the rest of the stack.
 

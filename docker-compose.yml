@@ -36,6 +36,7 @@ services:
       FILE_MANAGER_PORT: 4100
       PROBLEM_STORAGE_ROOT: /app/storage/problems
       FILE_MANAGER_MAX_SIZE_MB: 2
+      FILE_MANAGER_ADMIN_TOKEN: ${FILE_MANAGER_ADMIN_TOKEN:-local-file-manager-admin}
     ports:
       - "4100:4100"
     volumes:

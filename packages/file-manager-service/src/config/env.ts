@@ -1,30 +1,50 @@
 import path from 'node:path';
+
 import { config } from 'dotenv';
+import { z } from 'zod';
 
 config();
 
-const parsePort = (value: string | undefined, fallback: number): number => {
-  if (!value) {
-    return fallback;
-  }
+const envSchema = z
+  .object({
+    NODE_ENV: z.string().optional(),
+    FILE_MANAGER_PORT: z.string().optional(),
+    PROBLEM_STORAGE_ROOT: z.string().optional(),
+    FILE_MANAGER_MAX_SIZE_MB: z.string().optional(),
+    FILE_MANAGER_ADMIN_TOKEN: z
+      .string({ required_error: 'FILE_MANAGER_ADMIN_TOKEN is required' })
+      .min(1, 'FILE_MANAGER_ADMIN_TOKEN cannot be empty'),
+  })
+  .transform((value) => ({
+    nodeEnv: value.NODE_ENV ?? 'development',
+    port: Number.parseInt(value.FILE_MANAGER_PORT ?? '', 10),
+    storageRoot:
+      value.PROBLEM_STORAGE_ROOT ?? path.resolve(process.cwd(), 'problems'),
+    maxProblemSizeMb: Number.parseInt(value.FILE_MANAGER_MAX_SIZE_MB ?? '', 10),
+    adminToken: value.FILE_MANAGER_ADMIN_TOKEN,
+  }));
 
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
+const parsed = envSchema.safeParse(process.env);
 
-const parseSize = (value: string | undefined, fallback: number): number => {
-  if (!value) {
-    return fallback;
-  }
+if (!parsed.success) {
+  // eslint-disable-next-line no-console
+  console.error('Invalid environment configuration for file-manager service');
+  // eslint-disable-next-line no-console
+  console.error(parsed.error.format());
+  process.exit(1);
+}
 
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+const defaultPort = 4100;
+const defaultMaxSizeMb = 2;
+
+const normalizeNumber = (value: number, fallback: number): number => {
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? 'development',
-  port: parsePort(process.env.FILE_MANAGER_PORT, 4100),
-  storageRoot:
-    process.env.PROBLEM_STORAGE_ROOT ?? path.resolve(process.cwd(), 'problems'),
-  maxProblemSizeMb: parseSize(process.env.FILE_MANAGER_MAX_SIZE_MB, 2),
+  nodeEnv: parsed.data.nodeEnv,
+  port: normalizeNumber(parsed.data.port, defaultPort),
+  storageRoot: parsed.data.storageRoot,
+  maxProblemSizeMb: normalizeNumber(parsed.data.maxProblemSizeMb, defaultMaxSizeMb),
+  adminToken: parsed.data.adminToken,
 };

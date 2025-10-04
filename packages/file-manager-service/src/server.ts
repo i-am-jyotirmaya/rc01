@@ -4,10 +4,13 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import createHttpError, { isHttpError } from 'http-errors';
 import type { HttpError } from 'http-errors';
+import { ZodError } from 'zod';
+
 import { env } from './config/env';
-import { ensureDirectory } from './utils/files';
-import { ProblemStore } from './services/problemStore';
 import { createProblemRouter } from './routes/problems';
+import { requireAdmin } from './middleware/requireAdmin';
+import { ProblemStore } from './services/problemStore';
+import { ensureDirectory } from './utils/files';
 
 export const createServer = async (): Promise<Express> => {
   await ensureDirectory(env.storageRoot);
@@ -24,13 +27,18 @@ export const createServer = async (): Promise<Express> => {
     res.json({ status: 'ok' });
   });
 
-  app.use('/problems', createProblemRouter(store));
+  app.use('/problems', requireAdmin(env.adminToken), createProblemRouter(store));
 
   app.use((_req: Request, _res: Response, next: NextFunction) => {
     next(createHttpError(404, 'Route not found'));
   });
 
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (error instanceof ZodError) {
+      res.status(400).json({ message: 'Validation failed', errors: error.flatten() });
+      return;
+    }
+
     if (isHttpError(error)) {
       const httpError = error as HttpError;
       res.status(httpError.status).json({ message: httpError.message });

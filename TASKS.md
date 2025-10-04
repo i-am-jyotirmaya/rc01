@@ -15,7 +15,7 @@
 | BATT-003 | Battle Service | Support battle start triggers (admin action or scheduled timer) and transition to active state. | TODO | Requires integration with queue bootstrap. |
 | INF-001 | Infrastructure | Add dedicated file-manager service and persistent Docker volume for Markdown problem storage. | TODO | Update docker-compose and environment docs. |
 | SV-001 | File Manager Service | Scaffold API to upload/list/read/delete .md problems stored on shared volume. | TODO | Provide metadata (hash, slug) for battle service. |
-| UI-001 | Admin UI | Allow battle admins to manage configuration and attach problems from file manager. | TODO | Requires new views and API hooks. |
+| UI-001 | Admin UI | Allow battle admins to manage configuration and attach problems from file manager. | IN_PROGRESS | Host battle admin view now wired through Redux; file manager integrations still pending. |
 | RUNTIME-001 | Runtime Orchestration | Provision per-user execution pods or containers to run submissions securely. | TODO | Decide on container runtime strategy. |
 | SV-002 | Runner Service | Implement service that receives run requests and executes code in user pod, emitting completion status. | TODO | Needs messaging contract with queue and sync services. |
 | SV-003 | Queue Service | Build queue processor to dispatch submissions to runner pods and manage back-pressure. | TODO | Define queue storage (Redis, NATS, etc.). |

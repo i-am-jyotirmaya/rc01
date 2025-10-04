@@ -6,7 +6,7 @@ import { AuthModal } from "./components/auth/AuthModal";
 import { AppNavbar } from "./components/common/AppNavbar";
 import { HeroSection } from "./components/Hero/HeroSection";
 import { useThemeMode } from "./providers/theme-mode-context";
-import { HostBattlePage } from "./pages/HostBattlePage";
+import { HostBattlePage } from "./pages/host-battle";
 
 const App: FC = () => {
   const { token } = theme.useToken();

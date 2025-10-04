@@ -15,10 +15,10 @@ const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled']
 const createBattleSchema = z
   .object({
     name: z.string().min(1, 'Battle name is required'),
-    shortDescription: z.string().optional(),
+    shortDescription: z.union([z.string(), z.null()]).optional(),
     configuration: z.record(z.any()).optional(),
     startMode: startModeSchema,
-    scheduledStartAt: z.string().datetime().optional(),
+    scheduledStartAt: z.union([z.string().datetime(), z.null()]).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.startMode === 'scheduled' && !value.scheduledStartAt) {

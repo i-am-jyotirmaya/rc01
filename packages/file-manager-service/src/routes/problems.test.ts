@@ -7,6 +7,8 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { buildProblemTemplate } from 'problem-template';
+
 const ADMIN_TOKEN = 'test-admin-token';
 
 const createTestServer = async (): Promise<Express & { cleanup: () => Promise<void> }> => {
@@ -52,24 +54,30 @@ describe('Problem routes', () => {
     expect(invalidResponse.body).toMatchObject({ message: 'Admin authentication required' });
   });
 
-  it('creates, retrieves, lists, and deletes problems with hashes and validation', async () => {
-    const payload = {
+  it('creates, retrieves, lists, and deletes problems using the markdown template', async () => {
+    const content = buildProblemTemplate({
       title: 'Two Sum',
-      content: '# Two Sum\nFind two numbers.\n',
-    };
-    const expectedHash = createHash('sha256').update(payload.content).digest('hex');
+      difficulty: 'easy',
+      tags: ['arrays', 'hash-table'],
+      estimatedDurationMinutes: 20,
+    });
+    const expectedHash = createHash('sha256').update(content).digest('hex');
 
     const createResponse = await request(app)
       .post('/problems')
       .set('x-admin-token', ADMIN_TOKEN)
-      .send(payload);
+      .send({ content });
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body).toMatchObject({
       slug: 'two-sum',
       filename: 'two-sum.md',
+      title: 'Two Sum',
+      difficulty: 'easy',
+      tags: ['arrays', 'hash-table'],
+      estimatedDurationMinutes: 20,
       hash: expectedHash,
-      content: payload.content,
+      content,
     });
 
     const listResponse = await request(app)
@@ -78,12 +86,16 @@ describe('Problem routes', () => {
 
     expect(listResponse.status).toBe(200);
     expect(listResponse.body.problems).toEqual([
-      {
+      expect.objectContaining({
         slug: 'two-sum',
         filename: 'two-sum.md',
+        title: 'Two Sum',
+        difficulty: 'easy',
+        tags: ['arrays', 'hash-table'],
+        estimatedDurationMinutes: 20,
         hash: expectedHash,
         updatedAt: createResponse.body.updatedAt,
-      },
+      }),
     ]);
 
     const readResponse = await request(app)
@@ -94,8 +106,12 @@ describe('Problem routes', () => {
     expect(readResponse.body).toMatchObject({
       slug: 'two-sum',
       filename: 'two-sum.md',
+      title: 'Two Sum',
+      difficulty: 'easy',
+      tags: ['arrays', 'hash-table'],
+      estimatedDurationMinutes: 20,
       hash: expectedHash,
-      content: payload.content,
+      content,
     });
 
     const deleteResponse = await request(app)
@@ -109,7 +125,31 @@ describe('Problem routes', () => {
       .set('x-admin-token', ADMIN_TOKEN);
 
     expect(missingResponse.status).toBe(404);
+  });
 
+  it('supports markdown uploads via multipart form data', async () => {
+    const content = buildProblemTemplate({
+      title: 'Graph Paths',
+      difficulty: 'medium',
+      tags: ['graphs'],
+    });
+    const expectedHash = createHash('sha256').update(content).digest('hex');
+
+    const uploadResponse = await request(app)
+      .post('/problems')
+      .set('x-admin-token', ADMIN_TOKEN)
+      .attach('file', Buffer.from(content, 'utf-8'), 'graph-paths.md');
+
+    expect(uploadResponse.status).toBe(201);
+    expect(uploadResponse.body).toMatchObject({
+      slug: 'graph-paths',
+      filename: 'graph-paths.md',
+      hash: expectedHash,
+      title: 'Graph Paths',
+    });
+  });
+
+  it('rejects invalid slugs and malformed templates', async () => {
     const invalidSlugResponse = await request(app)
       .get('/problems/%20%20')
       .set('x-admin-token', ADMIN_TOKEN);
@@ -117,12 +157,12 @@ describe('Problem routes', () => {
     expect(invalidSlugResponse.status).toBe(400);
     expect(invalidSlugResponse.body).toMatchObject({ message: 'Validation failed' });
 
-    const invalidCreateResponse = await request(app)
+    const invalidTemplateResponse = await request(app)
       .post('/problems')
       .set('x-admin-token', ADMIN_TOKEN)
-      .send({ content: '' });
+      .send({ content: '# Missing front matter' });
 
-    expect(invalidCreateResponse.status).toBe(400);
-    expect(invalidCreateResponse.body).toMatchObject({ message: 'Validation failed' });
+    expect(invalidTemplateResponse.status).toBe(422);
+    expect(invalidTemplateResponse.body).toMatchObject({ message: expect.stringMatching(/template/i) });
   });
 });

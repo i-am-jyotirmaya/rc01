@@ -27,7 +27,7 @@ export const createServer = async (): Promise<Express> => {
     res.json({ status: 'ok' });
   });
 
-  app.use('/problems', requireAdmin(env.adminToken), createProblemRouter(store));
+  app.use('/problems', requireAdmin(env.adminToken), createProblemRouter(store, { maxProblemSizeMb: env.maxProblemSizeMb }));
 
   app.use((_req: Request, _res: Response, next: NextFunction) => {
     next(createHttpError(404, 'Route not found'));

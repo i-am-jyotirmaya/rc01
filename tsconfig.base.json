@@ -13,6 +13,11 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "erasableSyntaxOnly": false
+    "erasableSyntaxOnly": false,
+    "paths": {
+      "problem-template": [
+        "packages/problem-template/src"
+      ]
+    }
   }
 }

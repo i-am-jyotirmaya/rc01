@@ -113,6 +113,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.18
+      problem-template:
+        specifier: workspace:*
+        version: link:../../packages/problem-template
       react:
         specifier: ^19.1.1
         version: 19.1.1
@@ -201,6 +204,12 @@ importers:
       morgan:
         specifier: ^1.10.0
         version: 1.10.1
+      multer:
+        specifier: ^1.4.5-lts.2
+        version: 1.4.5-lts.2
+      problem-template:
+        specifier: workspace:*
+        version: link:../problem-template
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -217,6 +226,9 @@ importers:
       '@types/morgan':
         specifier: ^1.9.9
         version: 1.9.10
+      '@types/multer':
+        specifier: ^1.4.12
+        version: 1.4.13
       '@types/node':
         specifier: ^20.17.12
         version: 20.19.19
@@ -235,6 +247,8 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@20.19.19)
+
+  packages/problem-template: {}
 
 packages:
 
@@ -1464,11 +1478,12 @@ packages:
     resolution: {integrity: sha512-1rXeuUUiGGrykh+CeBdu5Ie7OJwinCgQY0bc7GCRxy5xVHy+moaqkpL/jqQq0MtQOeYcrqEz4abc5f0KtU7W4A==}
     engines: {node: '>=12.5.0'}
 
-  commander@2.20.3:
-    resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
   combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
+
+  commander@2.20.3:
+    resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
   component-emitter@1.3.1:
     resolution: {integrity: sha512-T0+barUSQRTUQASh8bx02dl+DhF54GtIDY13Y3m9oWTklKbb3Wv974meRpeZ3lp1JpLVECWWNHC4vaG2XHXouQ==}
@@ -4666,10 +4681,11 @@ snapshots:
       color-convert: 2.0.1
       color-string: 1.9.1
 
-  commander@2.20.3: {}
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
+
+  commander@2.20.3: {}
 
   component-emitter@1.3.1: {}
 

@@ -95,7 +95,7 @@ export const AdminBattleConfigPage: FC = () => {
               <Alert
                 type="warning"
                 message="Problem catalog unavailable"
-                description="TODO: surface file-manager service errors here once wiring is complete."
+                description={catalogError.message}
                 showIcon
               />
             ) : null}

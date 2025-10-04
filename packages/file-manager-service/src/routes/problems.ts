@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import createHttpError from 'http-errors';
+import multer from 'multer';
 import { z } from 'zod';
 
 import { createProblemSchema, type CreateProblemInput, ProblemStore } from '../services/problemStore';
@@ -16,8 +17,34 @@ const slugParamSchema = z.object({
     }),
 });
 
-export const createProblemRouter = (store: ProblemStore): Router => {
+type ProblemRouterOptions = {
+  maxProblemSizeMb: number;
+};
+
+const extractContentFromRequest = (req: Request): string | undefined => {
+  if (req.file?.buffer) {
+    return req.file.buffer.toString('utf-8');
+  }
+
+  const bodyContent = (req.body as Partial<CreateProblemInput>)?.content;
+  if (typeof bodyContent === 'string') {
+    return bodyContent;
+  }
+
+  return undefined;
+};
+
+const isTemplateValidationError = (error: unknown): error is Error => {
+  return error instanceof Error && /template/i.test(error.message);
+};
+
+export const createProblemRouter = (store: ProblemStore, options: ProblemRouterOptions): Router => {
   const router = Router();
+  const maxSizeBytes = Math.max(1, options.maxProblemSizeMb) * 1024 * 1024;
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: maxSizeBytes },
+  });
 
   router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
     try {
@@ -45,6 +72,11 @@ export const createProblemRouter = (store: ProblemStore): Router => {
           return;
         }
 
+        if (isTemplateValidationError(error)) {
+          next(createHttpError(422, error.message));
+          return;
+        }
+
         next(error);
       }
     },
@@ -52,16 +84,37 @@ export const createProblemRouter = (store: ProblemStore): Router => {
 
   router.post(
     '/',
+    upload.single('file'),
     async (
-      req: Request<unknown, unknown, CreateProblemInput>,
+      req: Request<unknown, unknown, Partial<CreateProblemInput>>,
       res: Response,
       next: NextFunction,
     ): Promise<void> => {
       try {
-        const parsedBody = createProblemSchema.parse(req.body);
+        const rawContent = extractContentFromRequest(req);
+        if (!rawContent || !rawContent.trim()) {
+          throw createHttpError(400, 'Problem content is required');
+        }
+
+        const parsedBody = createProblemSchema.parse({ content: rawContent });
         const problem = await store.save(parsedBody);
         res.status(201).json(problem);
       } catch (error) {
+        if (error instanceof multer.MulterError) {
+          if (error.code === 'LIMIT_FILE_SIZE') {
+            next(createHttpError(413, 'Problem file exceeds maximum allowed size.'));
+            return;
+          }
+
+          next(createHttpError(400, error.message));
+          return;
+        }
+
+        if (isTemplateValidationError(error)) {
+          next(createHttpError(422, error.message));
+          return;
+        }
+
         next(error);
       }
     },

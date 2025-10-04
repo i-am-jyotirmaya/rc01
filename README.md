@@ -74,6 +74,99 @@ The monorepo now includes a dedicated File Manager HTTP service responsible for 
 
 > The service lives under [`packages/file-manager-service`](packages/file-manager-service) and ships with a Dockerfile so it can run alongside the rest of the stack.
 
+## 🧩 Problem Template & Admin Workflow
+
+Problems are captured with a validated Markdown template that combines front matter metadata with well-known sections. The file manager rejects uploads that do not satisfy the structure, ensuring every battle problem ships with consistent context.
+
+### Front matter fields
+
+| Field | Required | Notes |
+| ------------------------- | -------- | ------------------------------------------ |
+| `title` | yes | Display title shown to admins and players. |
+| `slug` | optional | If omitted, derived from the title. |
+| `difficulty` | yes | One of `easy`, `medium`, `hard`, `insane`. |
+| `tags` | optional | Array of free-form labels. |
+| `estimatedDurationMinutes` | optional | Positive integer, rounded to minutes. |
+| `author` / `source` | optional | Attribution shown in the catalog. |
+
+### Required sections
+
+The body must contain the following headings in order:
+
+1. `## Problem Statement`
+2. `## Input Format`
+3. `## Output Format`
+4. `## Constraints`
+5. `## Sample Tests` (with at least one sample that includes `#### Input` and `#### Output`)
+6. `## Notes`
+
+A minimal example looks like this:
+
+```markdown
+---
+title: "Two Sum"
+slug: "two-sum-easy"
+difficulty: easy
+tags:
+  - arrays
+  - hash-table
+estimatedDurationMinutes: 20
+author: "CodeBattle Arena"
+source: "https://example.com/problems/two-sum"
+---
+
+# Two Sum
+
+## Problem Statement
+
+Find two distinct numbers that add up to the target value.
+
+## Input Format
+
+- Line 1: integer `n`
+- Line 2: `n` space-separated integers
+- Line 3: target integer
+
+## Output Format
+
+Print the indices (1-based) of the two numbers separated by a space.
+
+## Constraints
+
+- `2 <= n <= 10^5`
+- `-10^9 <= value <= 10^9`
+
+## Sample Tests
+
+### Sample 1
+
+#### Input
+
+3
+1 3 5
+4
+
+#### Output
+
+1 2
+
+#### Explanation
+
+1 + 3 meets the target 4.
+
+## Notes
+
+Return the pair with the smallest indices if multiple answers exist.
+```
+
+### Admin UI workflow
+
+The battle configuration screen now includes an **Add problem** modal. Admins can:
+
+- Upload a prepared `.md` file; the service validates it before saving.
+- Compose a new problem in a template-aware editor that highlights validation issues in real time.
+- Refresh the catalog instantly after saving to attach freshly authored problems to the current battle.
+
 ## 🗄️ Backend Overview
 
 The `apps/app-backend` service powers authentication and the foundational APIs for CodeBattle Arena. Key capabilities include:

@@ -1,0 +1,1 @@
+export { AdminBattleConfigPage } from "./AdminBattleConfigPage";

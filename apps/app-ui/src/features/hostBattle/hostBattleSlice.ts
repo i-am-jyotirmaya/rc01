@@ -128,6 +128,9 @@ const hostBattleSlice = createSlice({
   name: "hostBattle",
   initialState,
   reducers: {
+    upsertBattleRecord(state, action: PayloadAction<BattleRecord>) {
+      state.battles = upsertBattle(state.battles, action.payload);
+    },
     setShowAdvancedOptions(state, action: PayloadAction<boolean>) {
       state.showAdvancedOptions = action.payload;
     },
@@ -209,6 +212,7 @@ const hostBattleSlice = createSlice({
 
 export const hostBattleReducer = hostBattleSlice.reducer;
 export const {
+  upsertBattleRecord,
   setShowAdvancedOptions,
   setDrawerAdvancedOptions,
   openDrawer,

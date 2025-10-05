@@ -27,7 +27,8 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
         message.success("Draft saved successfully.");
       })
       .catch((error: unknown) => {
-        message.error((error as Error).message);
+        const reason = error instanceof Error ? error.message : String(error);
+        message.error(reason);
       });
   };
 

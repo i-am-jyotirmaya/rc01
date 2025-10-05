@@ -216,4 +216,3 @@ export const {
   clearError,
 } = hostBattleSlice.actions;
 
-export type { HostBattleState };

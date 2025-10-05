@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import type { BattleRecord } from "@rc01/api-client";
+
+import { battleApi } from "../../../../services/api";
 import type { BattleConfigDraft } from "../types";
 import type { BattleConfigStatus, BattleProblemSummary } from "../types";
 
@@ -44,6 +47,8 @@ export interface UseBattleConfigDraftResult {
   draft: BattleConfigDraft | null;
   isLoading: boolean;
   loadError: Error | null;
+  isPersisting: boolean;
+  persistError: Error | null;
   updateDraft: (input: DraftUpdate) => void;
   updateProblems: (nextProblems: BattleProblemSummary[]) => void;
   persistDraft: () => Promise<void>;
@@ -84,69 +89,77 @@ const initialStub: BattleConfigDraft = {
   linkExpiry: undefined,
 };
 
+const mapBattleToDraft = (battle: BattleRecord): BattleConfigDraft => {
+  const configuration = (battle.configuration ?? {}) as Partial<BattleConfigDraft>;
+  const problems = Array.isArray(configuration.problems)
+    ? (configuration.problems as BattleProblemSummary[])
+    : [];
+
+  return {
+    ...initialStub,
+    ...configuration,
+    battleId: battle.id,
+    name: battle.name,
+    status: (battle.status as BattleConfigStatus) ?? "draft",
+    shortDescription: battle.shortDescription ?? "",
+    startMode: battle.autoStart ? "scheduled" : "manual",
+    scheduledStartAt: battle.scheduledStartAt,
+    problems,
+  };
+};
+
+const buildConfigurationPayload = (draft: BattleConfigDraft): Record<string, unknown> => ({
+  gameMode: draft.gameMode,
+  difficulty: draft.difficulty,
+  maxPlayers: draft.maxPlayers,
+  privacy: draft.privacy,
+  allowSpectators: draft.allowSpectators,
+  voiceChat: draft.voiceChat,
+  teamBalancing: draft.teamBalancing,
+  problems: draft.problems,
+  primaryLanguagePool: draft.primaryLanguagePool,
+  notes: draft.notes,
+  turnTimeLimit: draft.turnTimeLimit,
+  totalDuration: draft.totalDuration,
+  scoringRules: draft.scoringRules,
+  tieBreakPreference: draft.tieBreakPreference,
+  powerUps: draft.powerUps,
+  ratingFloor: draft.ratingFloor,
+  ratingCeiling: draft.ratingCeiling,
+  moderatorRoles: draft.moderatorRoles,
+  preloadedResources: draft.preloadedResources,
+  rematchDefaults: draft.rematchDefaults,
+  joinQueueSize: draft.joinQueueSize,
+  password: draft.password,
+  linkExpiry: draft.linkExpiry,
+});
+
 export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): UseBattleConfigDraftResult => {
   const [draft, setDraft] = useState<BattleConfigDraft | null>(null);
   const [original, setOriginal] = useState<BattleConfigDraft | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<Error | null>(null);
+  const [isPersisting, setIsPersisting] = useState<boolean>(false);
+  const [persistError, setPersistError] = useState<Error | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    // TODO: Replace with real API request once SV-001 is complete.
     const bootstrap = async () => {
       setIsLoading(true);
       setLoadError(null);
+      setPersistError(null);
 
       try {
-        const simulatedResponse: BattleConfigDraft = {
-          ...initialStub,
-          battleId,
-          name: "CodeBattle Spring Invitational",
-          status: "configuring",
-          shortDescription:
-            "Stage the invitational bracket, confirm participants, and lock in curated problem sets before kickoff.",
-          gameMode: "head-to-head",
-          difficulty: "intermediate",
-          maxPlayers: 16,
-          privacy: "invite",
-          startMode: "scheduled",
-          scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-          allowSpectators: true,
-          voiceChat: true,
-          teamBalancing: true,
-          problems: [
-            {
-              id: "sample-problem-1",
-              title: "Graph Path Routing",
-              difficulty: "medium",
-              estimatedDurationMinutes: 30,
-              tags: ["graphs", "pathfinding"],
-            },
-          ],
-          primaryLanguagePool: ["typescript", "python", "rust"],
-          notes: "Confirm streaming overlays before publishing battle lobby.",
-          turnTimeLimit: 45,
-          totalDuration: 120,
-          scoringRules: "points-per-challenge",
-          tieBreakPreference: "fastest-submission",
-          powerUps: ["double-points"],
-          ratingFloor: 1200,
-          ratingCeiling: 2800,
-          moderatorRoles: ["judge", "streamer"],
-          preloadedResources: "starter-template",
-          rematchDefaults: true,
-          joinQueueSize: 25,
-          password: "invitational-2025",
-          linkExpiry: "7d",
-        };
-
+        console.log("Fetching battle response", battleApi)
+        const response = await battleApi.getBattle(battleId);
         if (!isMounted) {
           return;
         }
 
-        setDraft(simulatedResponse);
-        setOriginal(simulatedResponse);
+        const mappedDraft = mapBattleToDraft(response.battle);
+        setDraft(mappedDraft);
+        setOriginal(mappedDraft);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -159,7 +172,7 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
       }
     };
 
-    void bootstrap();
+    bootstrap();
 
     return () => {
       isMounted = false;
@@ -193,11 +206,35 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
   }, []);
 
   const persistDraft = useCallback(async () => {
-    // TODO: Replace simulated delay with battle configuration PATCH request.
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 250);
-    });
-  }, []);
+    if (!draft) {
+      return;
+    }
+
+    setPersistError(null);
+    setIsPersisting(true);
+
+    try {
+      const scheduledStart =
+        draft.startMode === "scheduled" ? draft.scheduledStartAt ?? null : null;
+
+      const response = await battleApi.updateBattle(draft.battleId, {
+        name: draft.name,
+        shortDescription: draft.shortDescription,
+        configuration: buildConfigurationPayload(draft),
+        startMode: draft.startMode,
+        scheduledStartAt: scheduledStart,
+      });
+
+      const mappedDraft = mapBattleToDraft(response.battle);
+      setDraft(mappedDraft);
+      setOriginal(mappedDraft);
+    } catch (error) {
+      setPersistError(error as Error);
+      throw error;
+    } finally {
+      setIsPersisting(false);
+    }
+  }, [draft]);
 
   const publishDraft = useCallback(async () => {
     // TODO: Replace with battle publish endpoint once available.
@@ -222,6 +259,8 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
     draft,
     isLoading,
     loadError,
+    isPersisting,
+    persistError,
     updateDraft,
     updateProblems,
     persistDraft,

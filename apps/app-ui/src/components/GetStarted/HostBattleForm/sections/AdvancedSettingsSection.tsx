@@ -2,7 +2,7 @@ import { Col, Form, InputNumber, Input, Row, Select, Space, Switch, Typography }
 import type { FormInstance } from "antd";
 import type { FC } from "react";
 import { advancedSelectOptions, advancedColProps } from "../formOptions";
-import type { HostBattleFormValues, PrivacySetting } from "../../../features/hostBattle/types";
+import type { HostBattleFormValues, PrivacySetting } from "../../../../features/hostBattle/types";
 
 interface AdvancedSettingsSectionProps {
   form: FormInstance<HostBattleFormValues>;

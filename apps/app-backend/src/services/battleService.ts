@@ -142,7 +142,7 @@ class BattleScheduler {
 
   async restore(start: (battleId: string) => Promise<BattleRecord | void>): Promise<void> {
     const scheduledBattles = await listScheduledBattles();
-    scheduledBattles.forEach((battle) => {
+    scheduledBattles.forEach((battle: DbBattleRow) => {
       this.schedule(battle, start);
     });
   }
@@ -265,6 +265,15 @@ export const initializeBattleScheduling = async (): Promise<void> => {
 export const getBattles = async (): Promise<BattleRecord[]> => {
   const rows = await listBattles();
   return rows.map(toBattleRecord);
+};
+
+export const getBattleById = async (id: string): Promise<BattleRecord> => {
+  const row = await findBattleById(id);
+  if (!row) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  return toBattleRecord(row);
 };
 
 export const createBattle = async (input: CreateBattleInput): Promise<BattleRecord> => {

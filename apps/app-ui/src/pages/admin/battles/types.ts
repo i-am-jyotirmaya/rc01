@@ -1,4 +1,12 @@
-export type BattleConfigStatus = "draft" | "configuring" | "ready" | "scheduled";
+export type BattleConfigStatus =
+  | "draft"
+  | "configuring"
+  | "ready"
+  | "scheduled"
+  | "lobby"
+  | "active"
+  | "completed"
+  | "cancelled";
 
 export interface BattleProblemSummary {
   id: string;

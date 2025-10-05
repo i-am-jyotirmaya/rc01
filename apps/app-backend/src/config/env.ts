@@ -23,10 +23,21 @@ export type AppEnvironment = {
   uploadsDir: string;
   maxUploadSizeMb: number;
   imageMaxWidth: number;
+  externalServices: {
+    fileManager: {
+      baseUrl: string;
+      adminToken: string;
+    };
+  };
 };
 
 const storageDir = process.env.STORAGE_DIR ?? path.resolve(process.cwd(), 'storage');
 const uploadsDir = path.join(storageDir, 'uploads');
+
+const normalizeBaseUrl = (value: string | undefined, fallback: string): string => {
+  const input = (value ?? fallback).trim();
+  return input.replace(/\/$/, '');
+};
 
 export const env: AppEnvironment = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -43,6 +54,12 @@ export const env: AppEnvironment = {
   uploadsDir,
   maxUploadSizeMb: numberFromEnv(process.env.MAX_UPLOAD_SIZE_MB, 5),
   imageMaxWidth: numberFromEnv(process.env.IMAGE_MAX_WIDTH, 512),
+  externalServices: {
+    fileManager: {
+      baseUrl: normalizeBaseUrl(process.env.FILE_MANAGER_BASE_URL, 'http://localhost:4100'),
+      adminToken: process.env.FILE_MANAGER_ADMIN_TOKEN ?? 'local-file-manager-admin',
+    },
+  },
 };
 
 if (!process.env.JWT_SECRET) {

@@ -46,10 +46,8 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.2",
     "pg-mem": "^3.0.5",
-    "prettier": "^3.6.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.6",
-    "typescript": "~5.8.3",
     "vitest": "^2.1.4"
   }
 }

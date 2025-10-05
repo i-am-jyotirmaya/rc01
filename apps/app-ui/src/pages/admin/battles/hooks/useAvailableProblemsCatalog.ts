@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { listProblems, type FileManagerProblemMetadata } from '../api/problemManagerClient';
+import type { ProblemMetadata } from '@rc01/api-client';
+
+import { problemApi } from '../../../../services/api';
 import type { ProblemCatalogEntry } from '../types';
 
 interface UseAvailableProblemsCatalogResult {
@@ -10,7 +12,7 @@ interface UseAvailableProblemsCatalogResult {
   refresh: () => Promise<void>;
 }
 
-const toProblemCatalogEntry = (metadata: FileManagerProblemMetadata): ProblemCatalogEntry => ({
+const toProblemCatalogEntry = (metadata: ProblemMetadata): ProblemCatalogEntry => ({
   id: metadata.slug,
   title: metadata.title,
   difficulty: metadata.difficulty,
@@ -18,6 +20,7 @@ const toProblemCatalogEntry = (metadata: FileManagerProblemMetadata): ProblemCat
   estimatedDurationMinutes: metadata.estimatedDurationMinutes,
   lastModifiedAt: metadata.updatedAt,
   author: metadata.author,
+  source: metadata.source,
 });
 
 export const useAvailableProblemsCatalog = (): UseAvailableProblemsCatalogResult => {
@@ -30,8 +33,8 @@ export const useAvailableProblemsCatalog = (): UseAvailableProblemsCatalogResult
     setError(null);
 
     try {
-      const catalog = await listProblems();
-      setProblems(catalog.map(toProblemCatalogEntry));
+      const response = await problemApi.listProblems();
+      setProblems(response.problems.map(toProblemCatalogEntry));
     } catch (refreshError) {
       setError(refreshError as Error);
     } finally {

@@ -6,7 +6,14 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
 
   apps/app-backend:
     dependencies:
@@ -83,18 +90,12 @@ importers:
       pg-mem:
         specifier: ^3.0.5
         version: 3.0.5
-      prettier:
-        specifier: ^3.6.2
-        version: 3.6.2
       tsconfig-paths:
         specifier: ^4.2.0
         version: 4.2.0
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
       vitest:
         specifier: ^2.1.4
         version: 2.1.9(@types/node@20.19.19)
@@ -159,12 +160,6 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.4.0
-      prettier:
-        specifier: ^3.6.2
-        version: 3.6.2
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
       typescript-eslint:
         specifier: ^8.44.0
         version: 8.45.0(eslint@9.36.0)(typescript@5.8.3)
@@ -239,11 +234,7 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@20.19.19)
 
-  packages/api-client:
-    devDependencies:
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
+  packages/api-client: {}
 
   packages/db:
     dependencies:
@@ -258,11 +249,7 @@ importers:
         specifier: ~5.8.3
         version: 5.8.3
 
-  packages/problem-template:
-    devDependencies:
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
+  packages/problem-template: {}
 
 packages:
 

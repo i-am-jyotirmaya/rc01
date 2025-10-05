@@ -22,6 +22,8 @@ export const AdminBattleConfigPage: FC = () => {
     draft,
     isLoading,
     loadError,
+    isPersisting,
+    persistError,
     updateDraft,
     updateProblems,
     persistDraft,
@@ -53,6 +55,21 @@ export const AdminBattleConfigPage: FC = () => {
     [draft, updateProblems],
   );
 
+  const handleReplaceProblem = useCallback(
+    (previousId: string, nextProblem: BattleProblemSummary) => {
+      if (!draft) {
+        return;
+      }
+
+      const nextProblems = draft.problems.map((entry) =>
+        entry.id === previousId ? nextProblem : entry,
+      );
+
+      updateProblems(nextProblems);
+    },
+    [draft, updateProblems],
+  );
+
   const renderContent = () => {
     if (loadError) {
       return (
@@ -77,7 +94,13 @@ export const AdminBattleConfigPage: FC = () => {
       {
         key: "advanced",
         label: "Advanced settings",
-        children: <BattleConfigAdvancedCard draft={draft} onChange={updateDraft} />,
+        children: (
+          <BattleConfigAdvancedCard
+            draft={draft}
+            onChange={updateDraft}
+            isPersisting={isPersisting}
+          />
+        ),
       },
       {
         key: "problems",
@@ -90,12 +113,21 @@ export const AdminBattleConfigPage: FC = () => {
               isLoading={isCatalogLoading}
               onToggleProblem={handleToggleProblem}
               onRefresh={refresh}
+              onReplaceProblem={handleReplaceProblem}
             />
             {catalogError ? (
               <Alert
                 type="warning"
                 message="Problem catalog unavailable"
                 description={catalogError.message}
+                showIcon
+              />
+            ) : null}
+            {persistError ? (
+              <Alert
+                type="error"
+                message="Failed to save draft"
+                description={persistError.message}
                 showIcon
               />
             ) : null}
@@ -116,6 +148,7 @@ export const AdminBattleConfigPage: FC = () => {
             onPersist={persistDraft}
             onPublish={publishDraft}
             onReset={resetLocalChanges}
+            isPersisting={isPersisting}
           />
         </Col>
       </Row>

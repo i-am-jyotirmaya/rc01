@@ -30,24 +30,26 @@ const parseConfiguredEnvironments = (): ApiEnvironmentOption[] => {
       return [];
     }
 
-    return parsed
-      .map((entry) => {
-        if (!entry || typeof entry !== "object") {
-          return null;
-        }
+    const options: ApiEnvironmentOption[] = [];
 
-        const key = typeof (entry as { key?: unknown }).key === "string" ? (entry as { key: string }).key.trim() : "";
-        const label =
-          typeof (entry as { label?: unknown }).label === "string" ? (entry as { label: string }).label.trim() : "";
-        const baseUrl = sanitizeBaseUrl((entry as { baseUrl?: unknown }).baseUrl as string | undefined);
+    parsed.forEach((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
 
-        if (!key || !label) {
-          return null;
-        }
+      const key = typeof (entry as { key?: unknown }).key === "string" ? (entry as { key: string }).key.trim() : "";
+      const label =
+        typeof (entry as { label?: unknown }).label === "string" ? (entry as { label: string }).label.trim() : "";
+      const baseUrl = sanitizeBaseUrl((entry as { baseUrl?: unknown }).baseUrl as string | undefined);
 
-        return { key, label, baseUrl } satisfies ApiEnvironmentOption;
-      })
-      .filter((option): option is ApiEnvironmentOption => Boolean(option));
+      if (!key || !label) {
+        return;
+      }
+
+      options.push({ key, label, baseUrl });
+    });
+
+    return options;
   } catch (error) {
     console.warn("Failed to parse VITE_API_ENVIRONMENTS. Falling back to defaults.", error);
     return [];

@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
+import { Badge, Button, Card, Descriptions, Space, Tag, Typography, message } from "antd";
 import dayjs from "dayjs";
 import type { FC } from "react";
 
@@ -10,6 +10,7 @@ interface BattleConfigSummaryCardProps {
   onPersist: () => Promise<void>;
   onPublish: () => Promise<void>;
   onReset: () => void;
+  isPersisting: boolean;
 }
 
 export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
@@ -18,9 +19,16 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
   onPersist,
   onPublish,
   onReset,
+  isPersisting,
 }) => {
   const handlePersist = () => {
-    void onPersist();
+    void onPersist()
+      .then(() => {
+        message.success("Draft saved successfully.");
+      })
+      .catch((error: unknown) => {
+        message.error((error as Error).message);
+      });
   };
 
   const handlePublish = () => {
@@ -122,17 +130,19 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
           </Space>
         </Descriptions.Item>
       </Descriptions>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16 }}>
-        TODO: wire up persist/publish actions to backend mutation endpoints.
-      </Typography.Paragraph>
       <Space style={{ marginTop: 12 }}>
-        <Button type="primary" onClick={handlePersist} disabled={!hasLocalChanges}>
+        <Button
+          type="primary"
+          onClick={handlePersist}
+          disabled={!hasLocalChanges}
+          loading={isPersisting}
+        >
           Save draft
         </Button>
-        <Button onClick={handlePublish} disabled={draft.problems.length === 0}>
+        <Button onClick={handlePublish} disabled={draft.problems.length === 0 || isPersisting}>
           Publish lobby
         </Button>
-        <Button onClick={onReset} disabled={!hasLocalChanges}>
+        <Button onClick={onReset} disabled={!hasLocalChanges || isPersisting}>
           Reset changes
         </Button>
       </Space>

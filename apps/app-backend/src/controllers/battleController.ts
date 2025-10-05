@@ -3,6 +3,7 @@ import createHttpError from 'http-errors';
 import { z } from 'zod';
 import {
   createBattle,
+  getBattleById,
   getBattles,
   joinBattle,
   startBattle,
@@ -15,6 +16,10 @@ const startModeSchema = z.enum(['manual', 'scheduled']);
 const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled', 'lobby']);
 
 const participantRoleSchema = z.enum(['host', 'player', 'spectator']);
+
+const battleIdParamSchema = z.object({
+  battleId: z.string().min(1, 'battleId is required'),
+});
 
 const createBattleSchema = z
   .object({
@@ -80,6 +85,16 @@ export const listBattlesHandler = async (req: Request, res: Response, next: Next
   try {
     const battles = await getBattles();
     res.json({ battles });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getBattleHandler = async (req: Request<{ battleId: string }>, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const battle = await getBattleById(battleId);
+    res.json({ battle });
   } catch (error) {
     next(error);
   }

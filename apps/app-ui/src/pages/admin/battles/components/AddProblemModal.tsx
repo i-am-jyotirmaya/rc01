@@ -20,11 +20,9 @@ import {
   validateProblemMarkdown,
 } from "@rc01/problem-template";
 
-import {
-  createProblemFromContent,
-  uploadProblemFile,
-  type FileManagerProblemRecord,
-} from "../api/problemManagerClient";
+import type { ProblemRecord } from "@rc01/api-client";
+
+import { problemApi } from "../../../../services/api";
 
 const { Paragraph, Text, Title } = Typography;
 const { TextArea } = Input;
@@ -32,7 +30,7 @@ const { TextArea } = Input;
 type AddProblemModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreated?: (problem: FileManagerProblemRecord) => Promise<void> | void;
+  onCreated?: (problem: ProblemRecord) => Promise<void> | void;
 };
 
 const defaultTemplate = (): string => buildProblemTemplate();
@@ -75,13 +73,12 @@ export const AddProblemModal = ({
       return [];
     }
 
-    return validationResult.issues.map((issue) => issue.message);
+    return validationResult.issues.map((issue) =>
+      typeof issue === "string" ? issue : issue.message,
+    );
   }, [validationResult]);
 
-  const handleSuccess = async (
-    problem: FileManagerProblemRecord,
-    messageText: string,
-  ) => {
+  const handleSuccess = async (problem: ProblemRecord, messageText: string) => {
     message.success(messageText);
     if (onCreated) {
       await onCreated(problem);
@@ -99,8 +96,8 @@ export const AddProblemModal = ({
 
     try {
       setIsSubmitting(true);
-      const problem = await createProblemFromContent(editorContent);
-      await handleSuccess(problem, "Problem saved successfully.");
+      const response = await problemApi.createProblemFromContent(editorContent);
+      await handleSuccess(response.problem, "Problem saved successfully.");
     } catch (error) {
       message.error((error as Error).message);
     } finally {
@@ -123,14 +120,14 @@ export const AddProblemModal = ({
         const validation = validateProblemMarkdown(text);
         if (!validation.isValid) {
           const issues = validation.issues
-            .map((issue) => issue.message)
+            .map((issue) => (typeof issue === "string" ? issue : issue.message))
             .join("\n");
           message.error("Upload failed.\n" + issues);
           return Upload.LIST_IGNORE;
         }
 
-        const problem = await uploadProblemFile(file);
-        await handleSuccess(problem, "Problem uploaded successfully.");
+        const response = await problemApi.uploadProblemFile(file);
+        await handleSuccess(response.problem, "Problem uploaded successfully.");
       } catch (error) {
         message.error((error as Error).message);
       } finally {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createBattleHandler,
+  getBattleHandler,
   listBattlesHandler,
   joinBattleHandler,
   startBattleHandler,
@@ -11,6 +12,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 export const battleRouter: Router = Router();
 
 battleRouter.get('/', listBattlesHandler);
+battleRouter.get('/:battleId', getBattleHandler);
 battleRouter.post('/', createBattleHandler);
 battleRouter.patch('/:battleId', updateBattleHandler);
 battleRouter.post('/:battleId/start', startBattleHandler);

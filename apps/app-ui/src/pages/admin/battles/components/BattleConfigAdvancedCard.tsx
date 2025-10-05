@@ -168,7 +168,7 @@ export const BattleConfigAdvancedCard: FC<BattleConfigAdvancedCardProps> = ({ dr
         </Form.Item>
       </Form>
       <Typography.Paragraph type="secondary" style={{ marginTop: 16 }}>
-        TODO: wire advanced settings to battle configuration API once backend contracts are ready.
+        Advanced preferences are stored with the draft. Remember to save when you are done making changes.
       </Typography.Paragraph>
     </Card>
   );

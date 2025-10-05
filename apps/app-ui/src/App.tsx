@@ -1,4 +1,4 @@
-import { Layout, theme } from "antd";
+﻿import { Layout, theme } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useMemo } from "react";
 import { Route, Routes } from "react-router-dom";
@@ -6,8 +6,9 @@ import { AuthModal } from "./components/auth/AuthModal";
 import { AppNavbar } from "./components/common/AppNavbar";
 import { HeroSection } from "./components/Hero/HeroSection";
 import { useThemeMode } from "./providers/theme-mode-context";
-import { HostBattlePage } from "./pages/host-battle";
+import { HostBattlePage } from "./pages/HostBattlePage";
 import { AdminBattleConfigPage } from "./pages/admin/battles";
+import { ProblemComposerPage, ProblemsPage } from "./pages/admin/problems";
 
 const App: FC = () => {
   const { token } = theme.useToken();
@@ -41,7 +42,16 @@ const App: FC = () => {
       <Routes>
         <Route path="/" element={<HeroSection />} />
         <Route path="/host" element={<HostBattlePage />} />
-        <Route path="/admin/battles/:battleId/config" element={<AdminBattleConfigPage />} />
+        <Route
+          path="/admin/battles/:battleId/config"
+          element={<AdminBattleConfigPage />}
+        />
+        <Route path="/admin/problems" element={<ProblemsPage />} />
+        <Route path="/admin/problems/new" element={<ProblemComposerPage mode="create" />} />
+        <Route
+          path="/admin/problems/:problemSlug"
+          element={<ProblemComposerPage mode="edit" />}
+        />
       </Routes>
       <AuthModal />
     </Layout>

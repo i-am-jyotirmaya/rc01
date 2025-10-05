@@ -1,4 +1,4 @@
-import type { PublicUser } from '../services/authService';
+import type { PublicUser } from '../services/authService.js';
 
 declare global {
   namespace Express {

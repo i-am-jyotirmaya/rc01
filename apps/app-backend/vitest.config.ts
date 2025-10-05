@@ -14,7 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@codebattle/db': resolve(__dirname, '../../packages/db/src'),
+      '@rc01/db': resolve(__dirname, '../../packages/db/src'),
     },
   },
 });

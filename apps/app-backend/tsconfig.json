@@ -4,15 +4,20 @@
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": ".",
+    "module": "NodeNext",
     "types": [
       "node",
       "vitest/globals"
     ],
     "paths": {
-      "@codebattle/db": [
-        "../../packages/db/dist/index"
+      "@rc01/db": [
+        "../../packages/db/src/index.ts"
+      ],
+      "@rc01/db/*": [
+        "../../packages/db/src/*"
       ]
-    }
+    },
+    "moduleResolution": "NodeNext"
   },
   "include": [
     "src"

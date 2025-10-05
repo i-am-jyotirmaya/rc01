@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "NodeNext",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -9,10 +9,31 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "erasableSyntaxOnly": false
+    "erasableSyntaxOnly": false,
+    "paths": {
+      "@rc01/api-client": [
+        "packages/api-client/src/index.ts"
+      ],
+      "@rc01/api-client/*": [
+        "packages/api-client/src/*"
+      ],
+      "@rc01/problem-template": [
+        "packages/problem-template/src/index.ts"
+      ],
+      "@rc01/problem-template/*": [
+        "packages/problem-template/src/*"
+      ],
+      "@rc01/markdown-tools": [
+        "packages/markdown-tools/src/index.ts"
+      ],
+      "@rc01/markdown-tools/*": [
+        "packages/markdown-tools/src/*"
+      ]
+    }
   }
 }

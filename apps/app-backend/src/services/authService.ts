@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs';
 import createHttpError from 'http-errors';
 import sharp from 'sharp';
 import { v4 as uuid } from 'uuid';
-import { insertUser, findUserByUsername, type DbUserRow } from '@codebattle/db';
-import { env } from '../config/env';
-import { ensureDirectory } from '../utils/filesystem';
-import { signAuthToken } from '../utils/tokens';
+import { insertUser, findUserByUsername, type DbUserRow } from '@rc01/db';
+import { env } from '../config/env.js';
+import { ensureDirectory } from '../utils/filesystem.js';
+import { signAuthToken } from '../utils/tokens.js';
 
 type RegisterInput = {
   username: string;

@@ -9,6 +9,7 @@ build/
 coverage/
 .env
 .DS_Store
+apps/app-backend/storage/
 
 # TypeScript build info
 *.tsbuildinfo

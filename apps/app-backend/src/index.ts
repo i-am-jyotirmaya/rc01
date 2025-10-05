@@ -1,9 +1,9 @@
-import { initDb, runCoreMigrations } from '@codebattle/db';
-import { env } from './config/env';
-import { app } from './app';
-import { ensureDirectory } from './utils/filesystem';
-import { logger } from './utils/logger';
-import { initializeBattleScheduling } from './services/battleService';
+import { initDb, runCoreMigrations } from '@rc01/db';
+import { env } from './config/env.js';
+import { app } from './app.js';
+import { ensureDirectory } from './utils/filesystem.js';
+import { logger } from './utils/logger.js';
+import { initializeBattleScheduling } from './services/battleService.js';
 
 const startServer = async (): Promise<void> => {
   try {

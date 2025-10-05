@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "module": "NodeNext",
+    "paths": {
+      "@rc01/problem-template": [
+        "../../packages/problem-template/src/index.ts"
+      ],
+      "@rc01/problem-template/*": [
+        "../../packages/problem-template/src/*"
+      ]
+    },
+    "moduleResolution": "NodeNext"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/problem-template"
+    }
+  ]
+}

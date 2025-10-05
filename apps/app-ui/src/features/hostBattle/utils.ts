@@ -3,7 +3,7 @@ import type {
   BattleStatus,
   CreateBattleRequestPayload,
   UpdateBattleRequestPayload,
-} from "@rc/api-client";
+} from "@rc01/api-client";
 import dayjs from "dayjs";
 import type { HostBattleFormValues, StartMode } from "./types";
 

@@ -348,6 +348,33 @@ export interface ListBattlesResponsePayload {
   battles: BattleRecord[];
 }
 
+export type ProblemDifficulty = 'easy' | 'medium' | 'hard' | 'insane';
+
+export interface ProblemMetadata {
+  slug: string;
+  filename: string;
+  title: string;
+  difficulty: ProblemDifficulty;
+  tags: string[];
+  estimatedDurationMinutes?: number;
+  author?: string;
+  source?: string;
+  updatedAt: string;
+  hash: string;
+}
+
+export interface ProblemRecord extends ProblemMetadata {
+  content: string;
+}
+
+export interface ListProblemsResponsePayload {
+  problems: ProblemMetadata[];
+}
+
+export interface ProblemResponsePayload {
+  problem: ProblemRecord;
+}
+
 export interface JoinBattleRequestPayload {
   role?: BattleParticipantRole;
 }
@@ -391,16 +418,62 @@ export class BattleApi {
   joinBattle(battleId: string, payload: JoinBattleRequestPayload = {}) {
     return this.client.post<JoinBattleResponsePayload>(`${this.routes.base}/${battleId}/join`, payload);
   }
+
+  public getBattle(battleId: string) {
+    return this.client.get<BattleResponsePayload>(`${this.routes.base}/${battleId}`);
+  }
+}
+
+interface ProblemRoutesConfig {
+  base: string;
+}
+
+const defaultProblemRoutes: ProblemRoutesConfig = {
+  base: '/api/problems',
+};
+
+export class ProblemApi {
+  private readonly routes: ProblemRoutesConfig;
+
+  constructor(private readonly client: ApiClient, routes: Partial<ProblemRoutesConfig> = {}) {
+    this.routes = { ...defaultProblemRoutes, ...routes };
+  }
+
+  listProblems() {
+    return this.client.get<ListProblemsResponsePayload>(this.routes.base);
+  }
+
+  getProblem(slug: string) {
+    return this.client.get<ProblemResponsePayload>(`${this.routes.base}/${encodeURIComponent(slug)}`);
+  }
+
+  createProblemFromContent(content: string) {
+    return this.client.post<ProblemResponsePayload>(this.routes.base, { content });
+  }
+
+  uploadProblemFile(file: File | Blob) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.client.post<ProblemResponsePayload>(this.routes.base, formData);
+  }
+
+  updateProblem(slug: string, content: string) {
+    return this.client.patch<ProblemResponsePayload>(`${this.routes.base}/${encodeURIComponent(slug)}`, {
+      content,
+    });
+  }
 }
 
 export interface ApiLayerConfig extends ApiClientOptions {
   authRoutes?: Partial<AuthRoutesConfig>;
   battleRoutes?: Partial<BattleRoutesConfig>;
+  problemRoutes?: Partial<ProblemRoutesConfig>;
 }
 
 export const createApiLayer = (config?: ApiLayerConfig) => {
   const client = new ApiClient(config);
   const auth = new AuthApi(client, config?.authRoutes);
   const battles = new BattleApi(client, config?.battleRoutes);
-  return { client, auth, battles };
+  const problems = new ProblemApi(client, config?.problemRoutes);
+  return { client, auth, battles, problems };
 };

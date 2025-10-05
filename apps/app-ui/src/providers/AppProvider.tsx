@@ -2,17 +2,9 @@ import { ConfigProvider } from "antd";
 import type { FC, PropsWithChildren } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Provider } from "react-redux";
-import { selectCurrentEnvironment } from "../features/environment/selectors";
-import { setApiEnvironment } from "../features/environment/environmentSlice";
-import {
-  API_ENV_STORAGE_KEY,
-  getDefaultApiEnvironmentKey,
-} from "../config/api-environments";
-import { setApiBaseUrl } from "../services/api";
 import { darkThemeConfig } from "../themes/dark-theme";
 import { lightThemeConfig } from "../themes/light-theme";
 import { store } from "../store/store";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { ThemeMode } from "./theme-mode-context";
 import { ThemeModeContext } from "./theme-mode-context";
 
@@ -35,26 +27,6 @@ const getInitialThemeMode = (): ThemeMode => {
   }
 
   return "dark";
-};
-
-const ApiEnvironmentBridge: FC = () => {
-  const dispatch = useAppDispatch();
-  const environment = useAppSelector(selectCurrentEnvironment);
-
-  useEffect(() => {
-    if (!environment) {
-      dispatch(setApiEnvironment(getDefaultApiEnvironmentKey()));
-      return;
-    }
-
-    setApiBaseUrl(environment.baseUrl);
-
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(API_ENV_STORAGE_KEY, environment.key);
-    }
-  }, [environment, dispatch]);
-
-  return null;
 };
 
 export const AppProvider: FC<PropsWithChildren> = ({ children }) => {
@@ -120,7 +92,6 @@ export const AppProvider: FC<PropsWithChildren> = ({ children }) => {
   return (
     <Provider store={store}>
       <ThemeModeContext.Provider value={contextValue}>
-        <ApiEnvironmentBridge />
         <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
       </ThemeModeContext.Provider>
     </Provider>

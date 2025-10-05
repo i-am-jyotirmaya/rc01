@@ -2,7 +2,7 @@ import { Col, DatePicker, Form, Input, InputNumber, Radio, Row, Select, Switch }
 import type { FormInstance } from "antd";
 import type { FC } from "react";
 import { basicSelectOptions, fieldColProps } from "../formOptions";
-import type { HostBattleFormValues, StartMode } from "../../../features/hostBattle/types";
+import type { HostBattleFormValues, StartMode } from "../../../../features/hostBattle/types";
 
 interface BasicSettingsSectionProps {
   form: FormInstance<HostBattleFormValues>;

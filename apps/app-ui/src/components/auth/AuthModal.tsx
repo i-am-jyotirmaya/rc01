@@ -3,7 +3,7 @@ import { Alert, Button, Form, Input, Space, Typography, Upload, theme } from "an
 import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
-import type { RegisterRequestPayload } from "@rc/api-client";
+import type { RegisterRequestPayload } from "@rc01/api-client";
 import { AppModal } from "../common/AppModal";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {

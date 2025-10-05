@@ -1,5 +1,5 @@
 {
-  "name": "app-ui",
+  "name": "@rc01/app-ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,14 +13,16 @@
   },
   "dependencies": {
     "@ant-design/icons": "~5.6.1",
-    "@rc/api-client": "workspace:*",
     "@reduxjs/toolkit": "^2.9.0",
     "antd": "^5.27.4",
     "dayjs": "^1.11.13",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.9.3"
+    "react-router-dom": "^7.9.3",
+    "@rc01/markdown-tools": "workspace:*",
+    "@rc01/api-client": "workspace:*",
+    "@rc01/problem-template": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -32,8 +34,6 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
-    "prettier": "^3.6.2",
-    "typescript": "~5.8.3",
     "typescript-eslint": "^8.44.0",
     "vite": "^7.1.7"
   }

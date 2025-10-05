@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { loginHandler, registerHandler } from '../controllers/authController';
-import { upload } from '../middleware/upload';
+import { loginHandler, registerHandler } from '../controllers/authController.js';
+import { upload } from '../middleware/upload.js';
 
 export const authRouter: ExpressRouter = Router();
 

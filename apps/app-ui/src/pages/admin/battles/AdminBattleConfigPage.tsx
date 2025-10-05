@@ -1,9 +1,11 @@
-import { Alert, Col, Layout, Result, Row, Skeleton, Space, Typography } from "antd";
+import { Alert, Col, Layout, Result, Row, Skeleton, Space, Tabs, Typography } from "antd";
+import type { TabsProps } from "antd";
 import type { FC } from "react";
 import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 
 import { BattleConfigDetailsCard } from "./components/BattleConfigDetailsCard";
+import { BattleConfigAdvancedCard } from "./components/BattleConfigAdvancedCard";
 import { BattleConfigSummaryCard } from "./components/BattleConfigSummaryCard";
 import { BattleProblemSelectionCard } from "./components/BattleProblemSelectionCard";
 import { useAvailableProblemsCatalog } from "./hooks/useAvailableProblemsCatalog";
@@ -20,6 +22,8 @@ export const AdminBattleConfigPage: FC = () => {
     draft,
     isLoading,
     loadError,
+    isPersisting,
+    persistError,
     updateDraft,
     updateProblems,
     persistDraft,
@@ -57,7 +61,7 @@ export const AdminBattleConfigPage: FC = () => {
         <Result
           status="error"
           title="Unable to load battle configuration"
-          subTitle="TODO: handle retry/backoff states when API is available."
+          subTitle="Please try again later."
         />
       );
     }
@@ -66,11 +70,28 @@ export const AdminBattleConfigPage: FC = () => {
       return <Skeleton active avatar paragraph={{ rows: 12 }} />;
     }
 
-    return (
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={14} xl={16}>
+    const tabItems: TabsProps["items"] = [
+      {
+        key: "basics",
+        label: "Battle basics",
+        children: <BattleConfigDetailsCard draft={draft} onChange={updateDraft} />,
+      },
+      {
+        key: "advanced",
+        label: "Advanced settings",
+        children: (
+          <BattleConfigAdvancedCard
+            draft={draft}
+            onChange={updateDraft}
+            isPersisting={isPersisting}
+          />
+        ),
+      },
+      {
+        key: "problems",
+        label: "Problem catalog",
+        children: (
           <Space direction="vertical" style={{ width: "100%" }} size="large">
-            <BattleConfigDetailsCard draft={draft} onChange={updateDraft} />
             <BattleProblemSelectionCard
               draft={draft}
               availableProblems={catalog}
@@ -82,11 +103,27 @@ export const AdminBattleConfigPage: FC = () => {
               <Alert
                 type="warning"
                 message="Problem catalog unavailable"
-                description="TODO: surface file-manager service errors here once wiring is complete."
+                description={catalogError}
+                showIcon
+              />
+            ) : null}
+            {persistError ? (
+              <Alert
+                type="error"
+                message="Failed to save draft"
+                description={persistError.message}
                 showIcon
               />
             ) : null}
           </Space>
+        ),
+      },
+    ];
+
+    return (
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={14} xl={16}>
+          <Tabs defaultActiveKey="basics" items={tabItems} />
         </Col>
         <Col xs={24} lg={10} xl={8}>
           <BattleConfigSummaryCard
@@ -95,6 +132,7 @@ export const AdminBattleConfigPage: FC = () => {
             onPersist={persistDraft}
             onPublish={publishDraft}
             onReset={resetLocalChanges}
+            isPersisting={isPersisting}
           />
         </Col>
       </Row>
@@ -109,8 +147,7 @@ export const AdminBattleConfigPage: FC = () => {
             Battle configuration
           </Typography.Title>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            Drafting battle outcomes for <Typography.Text code>{battleId}</Typography.Text>. TODO: replace stub data once
-            battle service endpoints are stable.
+            Managing configuration for battle <Typography.Text code>{battleId}</Typography.Text>.
           </Typography.Paragraph>
         </div>
         {renderContent()}

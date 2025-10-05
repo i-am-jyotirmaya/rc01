@@ -8,8 +8,8 @@ import type {
   AuthUserPayload,
   LoginRequestPayload,
   RegisterRequestPayload,
-} from "@rc/api-client";
-import { ApiError } from "@rc/api-client";
+} from "@rc01/api-client";
+import { ApiError } from "@rc01/api-client";
 import { authApi } from "../../services/api";
 
 export type AuthUiMode = "login" | "register";

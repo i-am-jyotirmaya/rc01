@@ -1,4 +1,4 @@
-import { Card, DatePicker, Form, Input, Select, Switch, Typography } from "antd";
+import { Card, DatePicker, Form, Input, InputNumber, Radio, Select, Switch } from "antd";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import type { FC } from "react";
@@ -16,6 +16,23 @@ interface BattleConfigDetailsCardProps {
 const startModeOptions = [
   { label: "Manual launch", value: "manual" },
   { label: "Scheduled", value: "scheduled" },
+];
+
+const gameModeOptions = [
+  { label: "Head-to-head", value: "head-to-head" },
+  { label: "Team battle", value: "team" },
+  { label: "Battle royale", value: "royale" },
+];
+
+const difficultyOptions = [
+  { label: "Beginner", value: "beginner" },
+  { label: "Intermediate", value: "intermediate" },
+  { label: "Expert", value: "expert" },
+];
+
+const privacyOptions = [
+  { label: "Public", value: "public" },
+  { label: "Invite only", value: "invite" },
 ];
 
 const languageOptions = ["typescript", "python", "rust", "go", "java"].map((language) => ({
@@ -45,7 +62,7 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
   };
 
   return (
-    <Card title="Battle details" extra={<Typography.Text type="secondary">BATT-001</Typography.Text>}>
+    <Card title="Battle details">
       <Form layout="vertical" disabled={isPersisting}>
         <Form.Item label="Battle name" required>
           <Input
@@ -61,6 +78,47 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
             autoSize={{ minRows: 3, maxRows: 5 }}
             onChange={(event) => onChange({ shortDescription: event.target.value })}
           />
+        </Form.Item>
+        <Form.Item label="Game mode">
+          <Select
+            allowClear
+            placeholder="Select gameplay format"
+            value={draft.gameMode}
+            options={gameModeOptions}
+            onChange={(value: string | undefined) => onChange({ gameMode: value ?? undefined })}
+          />
+        </Form.Item>
+        <Form.Item label="Difficulty">
+          <Select
+            allowClear
+            placeholder="Set expected difficulty"
+            value={draft.difficulty}
+            options={difficultyOptions}
+            onChange={(value: string | undefined) => onChange({ difficulty: value ?? undefined })}
+          />
+        </Form.Item>
+        <Form.Item label="Max players">
+          <InputNumber
+            min={2}
+            max={200}
+            style={{ width: "100%" }}
+            value={draft.maxPlayers ?? undefined}
+            onChange={(value) => onChange({ maxPlayers: typeof value === "number" ? value : null })}
+          />
+        </Form.Item>
+        <Form.Item label="Privacy">
+          <Radio.Group
+            optionType="button"
+            buttonStyle="solid"
+            value={draft.privacy}
+            onChange={(event) => onChange({ privacy: event.target.value })}
+          >
+            {privacyOptions.map((option) => (
+              <Radio.Button key={option.value} value={option.value}>
+                {option.label}
+              </Radio.Button>
+            ))}
+          </Radio.Group>
         </Form.Item>
         <Form.Item label="Start mode">
           <Select
@@ -85,13 +143,13 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
             placeholder="Choose permitted languages"
             value={draft.primaryLanguagePool}
             options={languageOptions}
-            onChange={(value) => onChange({ primaryLanguagePool: value })}
+            onChange={(value: string[]) => onChange({ primaryLanguagePool: value })}
           />
         </Form.Item>
         <Form.Item label="Battle notes" extra="Private notes for the admin team.">
           <TextArea
             value={draft.notes}
-            placeholder="Add reminders or TODOs for the battle crew"
+            placeholder="Add reminders for the battle crew"
             autoSize={{ minRows: 2, maxRows: 6 }}
             onChange={(event) => onChange({ notes: event.target.value })}
           />
@@ -119,9 +177,6 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
           />
         </Form.Item>
       </Form>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16 }}>
-        TODO: sync field updates with battle configuration API when SV-001 unlocks backend endpoints.
-      </Typography.Paragraph>
     </Card>
   );
 };

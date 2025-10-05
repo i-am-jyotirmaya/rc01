@@ -1,8 +1,8 @@
 import type { RequestHandler } from 'express';
 import createHttpError from 'http-errors';
-import { findUserById } from '@codebattle/db';
-import { toPublicUser } from '../services/authService';
-import { verifyAuthToken } from '../utils/tokens';
+import { findUserById } from '@rc01/db';
+import { toPublicUser } from '../services/authService.js';
+import { verifyAuthToken } from '../utils/tokens.js';
 
 type HttpLikeError = { status?: number };
 

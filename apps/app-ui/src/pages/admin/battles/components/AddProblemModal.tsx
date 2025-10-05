@@ -18,7 +18,7 @@ import type { UploadProps } from "antd/es/upload";
 import {
   buildProblemTemplate,
   validateProblemMarkdown,
-} from "problem-template";
+} from "@rc01/problem-template";
 
 import {
   createProblemFromContent,

@@ -1,5 +1,5 @@
 import type { QueryResult } from 'pg';
-import { getPool } from './index';
+import { getPool } from './index.js';
 
 export type BattleStatus =
   | 'draft'

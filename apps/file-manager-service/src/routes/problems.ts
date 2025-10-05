@@ -3,8 +3,8 @@ import createHttpError from 'http-errors';
 import multer from 'multer';
 import { z } from 'zod';
 
-import { createProblemSchema, type CreateProblemInput, ProblemStore } from '../services/problemStore';
-import { sanitizeSlug } from '../utils/files';
+import { createProblemSchema, type CreateProblemInput, ProblemStore } from '../services/problemStore.js';
+import { sanitizeSlug } from '../utils/files.js';
 
 const slugParamSchema = z.object({
   slug: z
@@ -86,7 +86,7 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
     '/',
     upload.single('file'),
     async (
-      req: Request<unknown, unknown, Partial<CreateProblemInput>>,
+      req: Request<Record<string, never>, unknown, Partial<CreateProblemInput>>,
       res: Response,
       next: NextFunction,
     ): Promise<void> => {

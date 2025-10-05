@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import createHttpError from 'http-errors';
 import { z } from 'zod';
-import { authenticateUser, registerUser } from '../services/authService';
+import { authenticateUser, registerUser } from '../services/authService.js';
 
 const registerSchema = z.object({
   username: z.string().min(3).max(64),

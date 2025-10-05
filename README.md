@@ -72,7 +72,7 @@ The monorepo now includes a dedicated File Manager HTTP service responsible for 
 - Docker Compose integration with a persistent `problem_markdown_data` volume shared with the backend.
 - Routes are protected by the `FILE_MANAGER_ADMIN_TOKEN` shared secret—copy `.env.example` to `.env` and update the token before bringing services up.
 
-> The service lives under [`packages/file-manager-service`](packages/file-manager-service) and ships with a Dockerfile so it can run alongside the rest of the stack.
+> The service lives under `apps/file-manager-service` and ships with a Dockerfile so it can run alongside the rest of the stack.
 
 ## 🧩 Problem Template & Admin Workflow
 
@@ -172,7 +172,7 @@ The battle configuration screen now includes an **Add problem** modal. Admins ca
 The `apps/app-backend` service powers authentication and the foundational APIs for CodeBattle Arena. Key capabilities include:
 
 - Secure user registration with hashed passwords and JWT-based authentication flows.
-- PostgreSQL persistence managed through the shared `@codebattle/db` workspace package.
+- PostgreSQL persistence managed through the shared `@rc01/db` workspace package.
 - Profile photo uploads that are resized automatically and stored locally for reuse in future battle features.
 - Docker Compose configuration for spinning up the API together with a Postgres instance.
 

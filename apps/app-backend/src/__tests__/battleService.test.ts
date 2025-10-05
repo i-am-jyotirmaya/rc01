@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { insertUser } from '@codebattle/db';
+import { insertUser } from '@rc01/db';
 import {
   battleEvents,
   createBattle,
@@ -7,8 +7,8 @@ import {
   startBattle,
   updateBattle,
   type BattleRecord,
-} from '../services/battleService';
-import { setupTestDatabase, teardownTestDatabase } from './helpers/db';
+} from '../services/battleService.js';
+import { setupTestDatabase, teardownTestDatabase } from './helpers/db.js';
 
 const createUser = async (overrides: Partial<{ username: string }> = {}) => {
   const id = randomUUID();

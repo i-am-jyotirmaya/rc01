@@ -1,17 +1,19 @@
 {
-  "name": "@codebattle/db",
+  "name": "@rc01/db",
   "version": "0.1.0",
   "description": "Database utilities for CodeBattle Arena backend",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsc -b tsconfig.build.json"
-  },
+  "type": "module",
   "dependencies": {
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "typescript": "~5.8.3",
     "@types/pg": "^8.11.10"
+  },
+  "main": "./dist/index.js",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b tsconfig.json"
   }
 }

@@ -8,9 +8,9 @@ import {
   getSlugFromMetadata,
   validateProblemMarkdown,
   type ProblemTemplateMetadata,
-} from 'problem-template';
+} from '@rc01/problem-template';
 
-import { resolveProblemPath, sanitizeSlug } from '../utils/files';
+import { resolveProblemPath, sanitizeSlug } from '../utils/files.js';
 
 const ensureSlug = (value: string): string => {
   const sanitized = sanitizeSlug(value);

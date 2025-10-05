@@ -28,9 +28,9 @@ For local development, copy the repository-level `.env.example` to `.env`, choos
 
 | Command | Description |
 | --- | --- |
-| `pnpm --filter file-manager-service dev` | Start the service with hot reloading via `ts-node-dev`. |
-| `pnpm --filter file-manager-service build` | Compile TypeScript sources to JavaScript. |
-| `pnpm --filter file-manager-service start` | Run the compiled server from the `dist/` directory. |
+| `pnpm --filter '@rc01/file-manager-service' dev` | Start the service with hot reloading via `ts-node-dev`. |
+| `pnpm --filter '@rc01/file-manager-service' build` | Compile TypeScript sources to JavaScript. |
+| `pnpm --filter '@rc01/file-manager-service' start` | Run the compiled server from the `dist/` directory. |
 
 ## Docker
 

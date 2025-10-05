@@ -7,7 +7,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildProblemTemplate } from 'problem-template';
+import { buildProblemTemplate } from '@rc01/problem-template';
 
 const ADMIN_TOKEN = 'test-admin-token';
 
@@ -18,7 +18,7 @@ const createTestServer = async (): Promise<Express & { cleanup: () => Promise<vo
   process.env.NODE_ENV = 'test';
 
   vi.resetModules();
-  const { createServer } = await import('../server');
+  const { createServer } = await import('../server.js');
   const app = await createServer();
 
   return Object.assign(app, {

@@ -56,7 +56,7 @@ Key variables:
 3. In one terminal, run the backend in watch mode:
 
    ```bash
-   pnpm --filter app-backend dev
+   pnpm --filter '@rc01/app-backend' dev
    ```
 
 4. The server will be available at `http://localhost:4000` by default.
@@ -66,7 +66,7 @@ Key variables:
 A dedicated `docker-compose.yml` is provided to launch the backend together with Postgres and a persistent volume for uploads. From the repository root:
 
 ```bash
-pnpm --filter app-backend docker:up
+pnpm --filter '@rc01/app-backend' docker:up
 ```
 
 See the [Docker](#docker) section for more details.
@@ -99,15 +99,15 @@ See the [Docker](#docker) section for more details.
 
 The backend ships with a Compose file that starts:
 
-- `app-backend`: Node.js service running on port 4000.
+- `@rc01/app-backend`: Node.js service running on port 4000.
 - `file-manager`: Dedicated Markdown storage service exposed on port 4100 and sharing the `problem_markdown_data` volume.
 - `postgres`: Postgres 15 database with a named volume for persistence.
 
 Available scripts:
 
-- `pnpm --filter app-backend docker:up` — Build images (if needed) and start the stack in the foreground.
-- `pnpm --filter app-backend docker:down` — Stop the stack and remove containers while preserving named volumes.
-- `pnpm --filter app-backend docker:logs` — Tail logs from both services.
+- `pnpm --filter '@rc01/app-backend' docker:up` — Build images (if needed) and start the stack in the foreground.
+- `pnpm --filter '@rc01/app-backend' docker:down` — Stop the stack and remove containers while preserving named volumes.
+- `pnpm --filter '@rc01/app-backend' docker:logs` — Tail logs from both services.
 
 The Compose project maps a local `storage/` directory for uploaded profile photos so that images persist between container restarts.
 

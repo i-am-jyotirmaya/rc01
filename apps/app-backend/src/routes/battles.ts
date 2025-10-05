@@ -5,8 +5,8 @@ import {
   joinBattleHandler,
   startBattleHandler,
   updateBattleHandler,
-} from '../controllers/battleController';
-import { requireAuth } from '../middleware/requireAuth';
+} from '../controllers/battleController.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 
 export const battleRouter: Router = Router();
 

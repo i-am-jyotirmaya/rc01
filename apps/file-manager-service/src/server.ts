@@ -6,11 +6,11 @@ import createHttpError, { isHttpError } from 'http-errors';
 import type { HttpError } from 'http-errors';
 import { ZodError } from 'zod';
 
-import { env } from './config/env';
-import { createProblemRouter } from './routes/problems';
-import { requireAdmin } from './middleware/requireAdmin';
-import { ProblemStore } from './services/problemStore';
-import { ensureDirectory } from './utils/files';
+import { env } from './config/env.js';
+import { createProblemRouter } from './routes/problems.js';
+import { requireAdmin } from './middleware/requireAdmin.js';
+import { ProblemStore } from './services/problemStore.js';
+import { ensureDirectory } from './utils/files.js';
 
 export const createServer = async (): Promise<Express> => {
   await ensureDirectory(env.storageRoot);

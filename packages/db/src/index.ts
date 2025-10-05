@@ -91,6 +91,6 @@ export const runCoreMigrations = async (): Promise<void> => {
   }
 };
 
-export * from './users';
-export * from './battles';
-export * from './battleParticipants';
+export * from './users.js';
+export * from './battles.js';
+export * from './battleParticipants.js';

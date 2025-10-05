@@ -13,11 +13,10 @@ COPY packages/db/package.json packages/db/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY apps/app-backend apps/app-backend
-COPY packages/db packages/db
+# COPY packages/db packages/db
 
-RUN pnpm --filter @codebattle/db build \
-  && pnpm --filter app-backend build
+RUN pnpm --filter '@rc01/app-backend' build
 
 EXPOSE 4000
 
-CMD ["pnpm", "--filter", "app-backend", "start"]
+CMD ["pnpm", "--filter", "@rc01/app-backend", "start"]

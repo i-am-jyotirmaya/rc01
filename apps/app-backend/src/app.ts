@@ -1,11 +1,11 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { env } from './config/env';
-import { authRouter } from './routes/auth';
-import { battleRouter } from './routes/battles';
-import { errorHandler } from './middleware/errorHandler';
-import { notFoundHandler } from './middleware/notFound';
+import { env } from './config/env.js';
+import { authRouter } from './routes/auth.js';
+import { battleRouter } from './routes/battles.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { notFoundHandler } from './middleware/notFound.js';
 
 const app: Express = express();
 

@@ -2,5 +2,15 @@
   "extends": "./tsconfig.json",
   "exclude": [
     "src/__tests__/**"
-  ]
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@rc01/db": [
+        "../../packages/db/dist/index.d.ts"
+      ],
+      "@rc01/db/*": [
+        "../../packages/db/dist/*.d.ts"
+      ]
+    }
+  }
 }

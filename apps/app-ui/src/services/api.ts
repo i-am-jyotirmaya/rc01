@@ -1,4 +1,4 @@
-import { createApiLayer } from "@rc/api-client";
+import { createApiLayer } from "@rc01/api-client";
 
 const baseUrl = (import.meta.env?.VITE_API_BASE_URL as string | undefined)?.trim();
 

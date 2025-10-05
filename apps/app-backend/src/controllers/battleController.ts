@@ -8,7 +8,7 @@ import {
   startBattle,
   updateBattle,
   type BattleStartMode,
-} from '../services/battleService';
+} from '../services/battleService.js';
 
 const startModeSchema = z.enum(['manual', 'scheduled']);
 

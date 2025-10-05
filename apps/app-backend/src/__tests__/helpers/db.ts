@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 import { newDb, type IMemoryDb } from 'pg-mem';
-import { closeDb, runCoreMigrations, setPool } from '@codebattle/db';
+import { closeDb, runCoreMigrations, setPool } from '@rc01/db';
 
 export const setupTestDatabase = async (): Promise<{ db: IMemoryDb }> => {
   const db = newDb({ autoCreateForeignKeyIndices: true });

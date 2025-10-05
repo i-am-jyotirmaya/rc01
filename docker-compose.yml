@@ -30,7 +30,7 @@ services:
   file-manager:
     build:
       context: .
-      dockerfile: packages/file-manager-service/Dockerfile
+      dockerfile: apps/file-manager-service/Dockerfile
     environment:
       NODE_ENV: development
       FILE_MANAGER_PORT: 4100

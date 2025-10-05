@@ -1,5 +1,5 @@
-import { env } from './config/env';
-import { createServer } from './server';
+import { env } from './config/env.js';
+import { createServer } from './server.js';
 
 const bootstrap = async (): Promise<void> => {
   try {

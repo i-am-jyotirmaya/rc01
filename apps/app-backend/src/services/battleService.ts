@@ -15,8 +15,8 @@ import {
   type UpdateBattlePayload,
   type DbBattleParticipantRow,
   type BattleParticipantRole,
-} from '@codebattle/db';
-import { logger } from '../utils/logger';
+} from '@rc01/db';
+import { logger } from '../utils/logger.js';
 
 export type BattleStartMode = 'manual' | 'scheduled';
 

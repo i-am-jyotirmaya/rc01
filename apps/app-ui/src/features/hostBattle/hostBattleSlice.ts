@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { BattleRecord } from "@rc/api-client";
+import type { BattleRecord } from "@rc01/api-client";
 import { battleApi } from "../../services/api";
 import type { RootState } from "../../store/store";
 import type { HostBattleFormValues } from "./types";

@@ -8,7 +8,7 @@ import type {
   BattleStatus,
   CreateBattleRequestPayload,
   UpdateBattleRequestPayload,
-} from "@rc/api-client";
+} from "@rc01/api-client";
 import { Link, useNavigate } from "react-router-dom";
 import { HostBattleForm } from "../components/GetStarted/HostBattleForm";
 import type { HostBattleFormValues, StartMode } from "../components/GetStarted/HostBattleForm";

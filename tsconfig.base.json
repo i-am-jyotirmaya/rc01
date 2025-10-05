@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "NodeNext",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -9,14 +9,17 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "erasableSyntaxOnly": false,
     "paths": {
-      "problem-template": [
-        "packages/problem-template/src"
+      "@rc01/problem-template": [
+        "packages/problem-template/src/index.ts"
+      ],
+      "@rc01/problem-template/*": [
+        "packages/problem-template/src/*"
       ]
     }
   }

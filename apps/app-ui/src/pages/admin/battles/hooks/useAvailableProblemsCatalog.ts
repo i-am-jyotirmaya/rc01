@@ -1,54 +1,45 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from "react";
 
-import type { ProblemMetadata } from '@rc01/api-client';
+import type { ProblemMetadata } from "@rc01/api-client";
 
-import { problemApi } from '../../../../services/api';
-import type { ProblemCatalogEntry } from '../types';
+import { useAppDispatch, useAppSelector } from "../../../../store/hooks";
+import { fetchProblems } from "../../../../features/problems/problemsSlice";
+import {
+  selectProblems,
+  selectProblemsError,
+  selectProblemsStatus,
+} from "../../../../features/problems/selectors";
 
 interface UseAvailableProblemsCatalogResult {
-  problems: ProblemCatalogEntry[];
+  problems: ProblemMetadata[];
   isLoading: boolean;
-  error: Error | null;
+  error: string | null;
   refresh: () => Promise<void>;
 }
 
-const toProblemCatalogEntry = (metadata: ProblemMetadata): ProblemCatalogEntry => ({
-  id: metadata.slug,
-  title: metadata.title,
-  difficulty: metadata.difficulty,
-  tags: metadata.tags ?? [],
-  estimatedDurationMinutes: metadata.estimatedDurationMinutes,
-  lastModifiedAt: metadata.updatedAt,
-  author: metadata.author,
-  source: metadata.source,
-});
-
 export const useAvailableProblemsCatalog = (): UseAvailableProblemsCatalogResult => {
-  const [problems, setProblems] = useState<ProblemCatalogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await problemApi.listProblems();
-      setProblems(response.problems.map(toProblemCatalogEntry));
-    } catch (refreshError) {
-      setError(refreshError as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const dispatch = useAppDispatch();
+  const problems = useAppSelector(selectProblems);
+  const status = useAppSelector(selectProblemsStatus);
+  const error = useAppSelector(selectProblemsError);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (status === "idle") {
+      void dispatch(fetchProblems());
+    }
+  }, [status, dispatch]);
+
+  const refresh = useCallback(async () => {
+    try {
+      await dispatch(fetchProblems()).unwrap();
+    } catch {
+      // The slice already tracks the error state.
+    }
+  }, [dispatch]);
 
   return {
     problems,
-    isLoading,
+    isLoading: status === "loading",
     error,
     refresh,
   };

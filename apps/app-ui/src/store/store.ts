@@ -1,15 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { arenaReducer } from "../features/arena/arenaSlice";
 import { authReducer } from "../features/auth/authSlice";
-import { environmentReducer } from "../features/environment/environmentSlice";
 import { hostBattleReducer } from "../features/hostBattle/hostBattleSlice";
+import { problemsReducer } from "../features/problems/problemsSlice";
 
 export const store = configureStore({
   reducer: {
     arena: arenaReducer,
     auth: authReducer,
-    environment: environmentReducer,
     hostBattle: hostBattleReducer,
+    problems: problemsReducer,
   },
 });
 

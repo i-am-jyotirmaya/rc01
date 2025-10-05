@@ -8,6 +8,7 @@ import { HeroSection } from "./components/Hero/HeroSection";
 import { useThemeMode } from "./providers/theme-mode-context";
 import { HostBattlePage } from "./pages/HostBattlePage";
 import { AdminBattleConfigPage } from "./pages/admin/battles";
+import { ProblemComposerPage, ProblemsPage } from "./pages/admin/problems";
 
 const App: FC = () => {
   const { token } = theme.useToken();
@@ -44,6 +45,12 @@ const App: FC = () => {
         <Route
           path="/admin/battles/:battleId/config"
           element={<AdminBattleConfigPage />}
+        />
+        <Route path="/admin/problems" element={<ProblemsPage />} />
+        <Route path="/admin/problems/new" element={<ProblemComposerPage mode="create" />} />
+        <Route
+          path="/admin/problems/:problemSlug"
+          element={<ProblemComposerPage mode="edit" />}
         />
       </Routes>
       <AuthModal />

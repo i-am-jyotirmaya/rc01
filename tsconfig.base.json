@@ -10,6 +10,7 @@
     "strict": true,
     "skipLibCheck": true,
     "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
@@ -26,6 +27,12 @@
       ],
       "@rc01/problem-template/*": [
         "packages/problem-template/src/*"
+      ],
+      "@rc01/markdown-tools": [
+        "packages/markdown-tools/src/index.ts"
+      ],
+      "@rc01/markdown-tools/*": [
+        "packages/markdown-tools/src/*"
       ]
     }
   }

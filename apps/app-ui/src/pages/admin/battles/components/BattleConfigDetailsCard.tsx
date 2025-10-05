@@ -1,4 +1,4 @@
-import { Card, DatePicker, Form, Input, InputNumber, Radio, Select, Switch, Typography } from "antd";
+import { Card, DatePicker, Form, Input, InputNumber, Radio, Select, Switch } from "antd";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import type { FC } from "react";
@@ -62,7 +62,7 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
   };
 
   return (
-    <Card title="Battle details" extra={<Typography.Text type="secondary">BATT-001</Typography.Text>}>
+    <Card title="Battle details">
       <Form layout="vertical" disabled={isPersisting}>
         <Form.Item label="Battle name" required>
           <Input
@@ -149,7 +149,7 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
         <Form.Item label="Battle notes" extra="Private notes for the admin team.">
           <TextArea
             value={draft.notes}
-            placeholder="Add reminders or TODOs for the battle crew"
+            placeholder="Add reminders for the battle crew"
             autoSize={{ minRows: 2, maxRows: 6 }}
             onChange={(event) => onChange({ notes: event.target.value })}
           />
@@ -177,9 +177,6 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
           />
         </Form.Item>
       </Form>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16 }}>
-        TODO: sync field updates with battle configuration API when SV-001 unlocks backend endpoints.
-      </Typography.Paragraph>
     </Card>
   );
 };

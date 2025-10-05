@@ -151,7 +151,6 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
       setPersistError(null);
 
       try {
-        console.log("Fetching battle response", battleApi)
         const response = await battleApi.getBattle(battleId);
         if (!isMounted) {
           return;
@@ -237,7 +236,6 @@ export const useBattleConfigDraft = ({ battleId }: UseBattleConfigDraftArgs): Us
   }, [draft]);
 
   const publishDraft = useCallback(async () => {
-    // TODO: Replace with battle publish endpoint once available.
     await new Promise((resolve) => {
       window.setTimeout(resolve, 250);
     });

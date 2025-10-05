@@ -3,11 +3,10 @@ import { Avatar, Button, Dropdown, Layout, Space, Typography, theme } from "antd
 import type { MenuProps } from "antd";
 import type { CSSProperties, FC } from "react";
 import { useCallback, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { logout, openLoginModal } from "../../features/auth/authSlice";
 import { selectAuthUser } from "../../features/auth/selectors";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 const { Header } = Layout;
@@ -100,9 +99,38 @@ export const AppNavbar: FC = () => {
     [],
   );
 
+  const navLinks = [
+    { label: "Battles", to: "/host" },
+    { label: "Problems", to: "/admin/problems" },
+  ];
+
+  const navLinkStyle: CSSProperties = useMemo(
+    () => ({
+      color: token.colorTextSecondary,
+      fontWeight: 600,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    }),
+    [token.colorTextSecondary],
+  );
+
+  const activeNavLinkStyle: CSSProperties = useMemo(
+    () => ({
+      color: token.colorWarning,
+    }),
+    [token.colorWarning],
+  );
+
   return (
     <Header style={headerStyle}>
-      <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 32,
+        }}
+      >
         {showBackButton ? (
           <Button
             type="text"
@@ -113,9 +141,22 @@ export const AppNavbar: FC = () => {
             Back
           </Button>
         ) : null}
+        <Space size={24} align="center">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              style={({ isActive }) => ({
+                ...navLinkStyle,
+                ...(isActive ? activeNavLinkStyle : {}),
+              })}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </Space>
       </div>
       <Space size="middle" align="center">
-        <EnvironmentSwitcher />
         {isAuthenticated ? (
           <Dropdown
             menu={{ items: userMenuItems, onClick: handleMenuClick }}

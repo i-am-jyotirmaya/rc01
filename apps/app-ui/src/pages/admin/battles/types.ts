@@ -48,8 +48,3 @@ export interface BattleConfigDraft {
   linkExpiry?: string;
 }
 
-export interface ProblemCatalogEntry extends BattleProblemSummary {
-  lastModifiedAt?: string;
-  author?: string;
-  source?: string;
-}

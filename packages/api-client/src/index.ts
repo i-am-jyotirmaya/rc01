@@ -420,7 +420,6 @@ export class BattleApi {
   }
 
   public getBattle(battleId: string) {
-    console.log("Calling api", `${this.routes.base}/${battleId}`)
     return this.client.get<BattleResponsePayload>(`${this.routes.base}/${battleId}`);
   }
 }

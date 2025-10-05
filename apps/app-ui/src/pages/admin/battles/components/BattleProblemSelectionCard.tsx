@@ -1,42 +1,40 @@
-import { useMemo, useState } from 'react';
+import { useCallback } from "react";
 
-import { Button, Card, Empty, List, Skeleton, Space, Tag, Typography } from 'antd';
-import dayjs from 'dayjs';
+import { Button, Card, Empty, List, Skeleton, Space, Tag, Typography } from "antd";
+import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 
-import type { ProblemMetadata } from '@rc01/api-client';
+import type { ProblemMetadata } from "@rc01/api-client";
 
-import type { BattleConfigDraft, BattleProblemSummary, ProblemCatalogEntry } from '../types';
-import { AddProblemModal } from './AddProblemModal';
-import { ProblemPreviewDrawer } from './ProblemPreviewDrawer';
+import type { BattleConfigDraft, BattleProblemSummary } from "../types";
 
 interface BattleProblemSelectionCardProps {
   draft: BattleConfigDraft;
-  availableProblems: ProblemCatalogEntry[];
+  availableProblems: ProblemMetadata[];
   isLoading: boolean;
   onToggleProblem: (problem: BattleProblemSummary) => void;
   onRefresh: () => void;
-  onReplaceProblem: (previousId: string, nextProblem: BattleProblemSummary) => void;
 }
 
 const renderProblem = (
-  problem: ProblemCatalogEntry,
+  problem: ProblemMetadata,
   isSelected: boolean,
   onToggle: () => void,
-  onPreview: () => void,
+  onOpen: () => void,
 ) => {
   const metadataPieces: string[] = [];
-  if (problem.lastModifiedAt) {
-    metadataPieces.push('Updated ' + dayjs(problem.lastModifiedAt).format('YYYY-MM-DD HH:mm'));
+  if (problem.updatedAt) {
+    metadataPieces.push("Updated " + dayjs(problem.updatedAt).format("YYYY-MM-DD HH:mm"));
   }
 
   return (
     <List.Item
       actions={[
-        <Button key="preview" type="link" onClick={onPreview} size="small">
-          Preview
+        <Button key="open" type="link" onClick={onOpen} size="small">
+          Manage
         </Button>,
-        <Button key="toggle" type={isSelected ? 'primary' : 'default'} onClick={onToggle} size="small">
-          {isSelected ? 'Remove' : 'Add'}
+        <Button key="toggle" type={isSelected ? "primary" : "default"} onClick={onToggle} size="small">
+          {isSelected ? "Remove" : "Add"}
         </Button>,
       ]}
     >
@@ -44,7 +42,7 @@ const renderProblem = (
         title={
           <Space size="small">
             <Typography.Text strong>{problem.title}</Typography.Text>
-            <Tag color={isSelected ? 'gold' : 'default'}>{problem.difficulty}</Tag>
+            <Tag color={isSelected ? "gold" : "default"}>{problem.difficulty}</Tag>
           </Space>
         }
         description={
@@ -53,11 +51,11 @@ const renderProblem = (
               {problem.source ? (
                 <Tag color="geekblue">Source: {problem.source}</Tag>
               ) : null}
-              {problem.tags.map((tag) => (
+              {problem.tags.map((tag: string) => (
                 <Tag key={tag}>{tag}</Tag>
               ))}
               {problem.estimatedDurationMinutes ? (
-                <Typography.Text type="secondary">{'~' + problem.estimatedDurationMinutes + ' min'}</Typography.Text>
+                <Typography.Text type="secondary">{"~" + problem.estimatedDurationMinutes + " min"}</Typography.Text>
               ) : null}
             </Space>
             {problem.author ? (
@@ -66,7 +64,7 @@ const renderProblem = (
               </Typography.Text>
             ) : null}
             {metadataPieces.length ? (
-              <Typography.Text type="secondary">{metadataPieces.join(' · ')}</Typography.Text>
+              <Typography.Text type="secondary">{metadataPieces.join(" · ")}</Typography.Text>
             ) : null}
           </Space>
         }
@@ -81,18 +79,19 @@ export const BattleProblemSelectionCard = ({
   isLoading,
   onToggleProblem,
   onRefresh,
-  onReplaceProblem,
 }: BattleProblemSelectionCardProps) => {
-  const [isAddProblemModalOpen, setAddProblemModalOpen] = useState(false);
-  const [previewSlug, setPreviewSlug] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleModalClose = () => {
-    setAddProblemModalOpen(false);
-  };
-
-  const handleProblemCreated = async () => {
-    await Promise.resolve(onRefresh());
-  };
+  const toBattleProblemSummary = useCallback(
+    (problem: ProblemMetadata): BattleProblemSummary => ({
+      id: problem.slug,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      tags: problem.tags,
+      estimatedDurationMinutes: problem.estimatedDurationMinutes,
+    }),
+    [],
+  );
 
   const renderContent = () => {
     if (isLoading) {
@@ -100,80 +99,41 @@ export const BattleProblemSelectionCard = ({
     }
 
     if (!availableProblems.length) {
-      return <Empty description="No problems yet. Add one using the template workflow." />;
+      return <Empty description="No problems yet. Use the Problems page to add one." />;
     }
 
     return (
       <List
         dataSource={availableProblems}
         renderItem={(problem) => {
-          const isSelected = draft.problems.some((candidate) => candidate.id === problem.id);
+          const isSelected = draft.problems.some((candidate) => candidate.id === problem.slug);
+          const summary = toBattleProblemSummary(problem);
           return renderProblem(
             problem,
             isSelected,
-            () => onToggleProblem(problem),
-            () => setPreviewSlug(problem.id),
+            () => onToggleProblem(summary),
+            () => navigate(`/admin/problems/${problem.slug}`),
           );
         }}
       />
     );
   };
 
-  const selectedProblemMetadata = useMemo(
-    () => availableProblems.find((problem) => problem.id === previewSlug) ?? null,
-    [availableProblems, previewSlug],
-  );
-
-  const handleProblemSaved = async (
-    previousSlug: string,
-    updatedProblem: ProblemMetadata,
-  ): Promise<void> => {
-    await Promise.resolve(onRefresh());
-
-    const summary: BattleProblemSummary = {
-      id: updatedProblem.slug,
-      title: updatedProblem.title,
-      difficulty: updatedProblem.difficulty,
-      tags: updatedProblem.tags,
-      estimatedDurationMinutes: updatedProblem.estimatedDurationMinutes,
-    };
-
-    if (draft.problems.some((problem) => problem.id === previousSlug)) {
-      onReplaceProblem(previousSlug, summary);
-    }
-
-    setPreviewSlug(updatedProblem.slug);
-  };
-
   return (
-    <>
-      <Card
-        title="Problem catalog"
-        extra={
-          <Space>
-            <Button type="primary" onClick={() => setAddProblemModalOpen(true)} size="small">
-              Add problem
-            </Button>
-            <Button onClick={onRefresh} size="small" disabled={isLoading}>
-              Refresh
-            </Button>
-          </Space>
-        }
-      >
-        {renderContent()}
-      </Card>
-      <AddProblemModal
-        open={isAddProblemModalOpen}
-        onClose={handleModalClose}
-        onCreated={handleProblemCreated}
-      />
-      <ProblemPreviewDrawer
-        open={Boolean(previewSlug)}
-        problemSlug={previewSlug}
-        initialMetadata={selectedProblemMetadata}
-        onClose={() => setPreviewSlug(null)}
-        onProblemSaved={handleProblemSaved}
-      />
-    </>
+    <Card
+      title="Problem catalog"
+      extra={
+        <Space>
+          <Button type="primary" onClick={() => navigate("/admin/problems")} size="small">
+            Manage library
+          </Button>
+          <Button onClick={onRefresh} size="small" disabled={isLoading}>
+            Refresh
+          </Button>
+        </Space>
+      }
+    >
+      {renderContent()}
+    </Card>
   );
 };

@@ -55,28 +55,13 @@ export const AdminBattleConfigPage: FC = () => {
     [draft, updateProblems],
   );
 
-  const handleReplaceProblem = useCallback(
-    (previousId: string, nextProblem: BattleProblemSummary) => {
-      if (!draft) {
-        return;
-      }
-
-      const nextProblems = draft.problems.map((entry) =>
-        entry.id === previousId ? nextProblem : entry,
-      );
-
-      updateProblems(nextProblems);
-    },
-    [draft, updateProblems],
-  );
-
   const renderContent = () => {
     if (loadError) {
       return (
         <Result
           status="error"
           title="Unable to load battle configuration"
-          subTitle="TODO: handle retry/backoff states when API is available."
+          subTitle="Please try again later."
         />
       );
     }
@@ -113,13 +98,12 @@ export const AdminBattleConfigPage: FC = () => {
               isLoading={isCatalogLoading}
               onToggleProblem={handleToggleProblem}
               onRefresh={refresh}
-              onReplaceProblem={handleReplaceProblem}
             />
             {catalogError ? (
               <Alert
                 type="warning"
                 message="Problem catalog unavailable"
-                description={catalogError.message}
+                description={catalogError}
                 showIcon
               />
             ) : null}
@@ -163,8 +147,7 @@ export const AdminBattleConfigPage: FC = () => {
             Battle configuration
           </Typography.Title>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            Drafting battle outcomes for <Typography.Text code>{battleId}</Typography.Text>. TODO: replace stub data once
-            battle service endpoints are stable.
+            Managing configuration for battle <Typography.Text code>{battleId}</Typography.Text>.
           </Typography.Paragraph>
         </div>
         {renderContent()}

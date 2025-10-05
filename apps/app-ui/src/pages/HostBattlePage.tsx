@@ -36,7 +36,11 @@ import {
   selectShowAdvancedOptions,
   selectStartingBattleId,
 } from "../features/hostBattle/selectors";
-import { formatDateTime, isConfigurableStatus, statusMeta } from "../features/hostBattle/utils";
+import {
+  formatDateTime,
+  isConfigurableStatus,
+  statusMeta,
+} from "../features/hostBattle/utils";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -473,7 +477,9 @@ export const HostBattlePage: FC = () => {
     async (values: HostBattleFormValues) => {
       try {
         const createdBattle = await dispatch(createBattle(values)).unwrap();
-        message.success(`Battle "${createdBattle.name ?? values.battleName.trim()}" saved`);
+        message.success(
+          `Battle "${createdBattle.name ?? values.battleName.trim()}" saved`,
+        );
         form.resetFields();
         dispatch(setShowAdvancedOptions(false));
       } catch {
@@ -487,7 +493,9 @@ export const HostBattlePage: FC = () => {
     async (battle: BattleRecord) => {
       try {
         const updatedBattle = await dispatch(startBattle(battle.id)).unwrap();
-        message.success(`Battle "${updatedBattle.name ?? battle.name}" launched`);
+        message.success(
+          `Battle "${updatedBattle.name ?? battle.name}" launched`,
+        );
       } catch {
         // Error messaging handled via global host battle error state.
       }
@@ -558,7 +566,7 @@ export const HostBattlePage: FC = () => {
         key: "launch",
         render: (_: unknown, record) => (
           <Space direction="vertical" size={4} align="start">
-            <Tag color={record.autoStart ? statusMeta.scheduled.color : "default"}>
+            <Tag color={record.autoStart ? "blue" : "default"}>
               {record.autoStart ? "Scheduled" : "Manual"}
             </Tag>
             {record.autoStart && record.scheduledStartAt ? (
@@ -584,7 +592,8 @@ export const HostBattlePage: FC = () => {
         key: "actions",
         align: "right" as const,
         render: (_: unknown, record) => {
-          const canStart = record.status === "ready" || record.status === "scheduled";
+          const canStart =
+            record.status === "published" || record.status === "lobby";
           return (
             <Space size="small">
               <Button
@@ -607,7 +616,13 @@ export const HostBattlePage: FC = () => {
         },
       },
     ],
-    [handleNavigateToConfig, handleStartBattle, palette.headingColor, palette.paragraphMutedColor, startingBattleId],
+    [
+      handleNavigateToConfig,
+      handleStartBattle,
+      palette.headingColor,
+      palette.paragraphMutedColor,
+      startingBattleId,
+    ],
   );
 
   return (
@@ -619,11 +634,15 @@ export const HostBattlePage: FC = () => {
             Host your own battle
           </Title>
           <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
-            Configure the rules, invite your competitors, and tailor the experience before you go live. Everything updates
-            instantly so you can share the lobby the moment it feels ready.
+            Configure the rules, invite your competitors, and tailor the
+            experience before you go live. Everything updates instantly so you
+            can share the lobby the moment it feels ready.
           </Paragraph>
           <Text style={{ color: palette.linkHintColor }}>
-            Prefer to join an existing competition? <Link to="/" style={{ color: accentColor }}>Return to the lobby</Link>
+            Prefer to join an existing competition?{" "}
+            <Link to="/" style={{ color: accentColor }}>
+              Return to the lobby
+            </Link>
             to paste an invite link or code.
           </Text>
         </div>
@@ -633,23 +652,46 @@ export const HostBattlePage: FC = () => {
               Battle blueprint
             </Title>
             <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
-              Outline your format, scheduling, and moderation in one pass. You can revisit this setup any time before the
-              battle starts.
+              Outline your format, scheduling, and moderation in one pass. You
+              can revisit this setup any time before the battle starts.
             </Paragraph>
             <Space size={[token.marginSM, token.marginSM]} wrap>
               <Tag style={tagStyle}>Real-time control</Tag>
               <Tag style={tagStyle}>Private or public</Tag>
               <Tag style={tagStyle}>Power-up pools</Tag>
             </Space>
-            <Divider style={{ margin: `${token.marginMD}px 0`, borderColor: palette.dividerColor }} />
-            <Paragraph strong style={{ margin: 0, color: palette.headingColor }}>Setup checklist</Paragraph>
+            <Divider
+              style={{
+                margin: `${token.marginMD}px 0`,
+                borderColor: palette.dividerColor,
+              }}
+            />
+            <Paragraph
+              strong
+              style={{ margin: 0, color: palette.headingColor }}
+            >
+              Setup checklist
+            </Paragraph>
             <ul style={highlightListStyle}>
-              <li>Pick battle modes, difficulty, and player limits that match your format.</li>
-              <li>Lock down privacy, queue sizing, and moderation so teams join smoothly.</li>
-              <li>Enable advanced scoring, power-ups, and resources when you want extra spectacle.</li>
+              <li>
+                Pick battle modes, difficulty, and player limits that match your
+                format.
+              </li>
+              <li>
+                Lock down privacy, queue sizing, and moderation so teams join
+                smoothly.
+              </li>
+              <li>
+                Enable advanced scoring, power-ups, and resources when you want
+                extra spectacle.
+              </li>
             </ul>
-            <Paragraph style={{ margin: 0, color: palette.paragraphMutedColor }}>
-              Need inspiration? <Text style={{ color: accentColor }}>Community templates</Text> are dropping soon.
+            <Paragraph
+              style={{ margin: 0, color: palette.paragraphMutedColor }}
+            >
+              Need inspiration?{" "}
+              <Text style={{ color: accentColor }}>Community templates</Text>{" "}
+              are dropping soon.
             </Paragraph>
           </div>
           <ConfigProvider theme={formTheme}>
@@ -672,8 +714,9 @@ export const HostBattlePage: FC = () => {
               Battle control center
             </Title>
             <Paragraph style={{ margin: 0, color: palette.bodyTextColor }}>
-              Monitor upcoming battles, tweak configurations, and launch when the timing is right. Scheduled battles will
-              auto-launch, while manual battles stay parked here until you start them.
+              Monitor upcoming battles, tweak configurations, and launch when
+              the timing is right. Scheduled battles will auto-launch, while
+              manual battles stay parked here until you start them.
             </Paragraph>
             <Table
               columns={columns}
@@ -682,7 +725,9 @@ export const HostBattlePage: FC = () => {
               loading={loadingBattles}
               pagination={false}
               size="middle"
-              locale={{ emptyText: <Empty description="No battles configured yet" /> }}
+              locale={{
+                emptyText: <Empty description="No battles configured yet" />,
+              }}
               style={{ background: "transparent" }}
             />
           </div>

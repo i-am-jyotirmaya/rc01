@@ -7,17 +7,14 @@ import type {
 import dayjs from "dayjs";
 import type { HostBattleFormValues, StartMode } from "./types";
 
-export const configurableStatuses: BattleStatus[] = ["draft", "configuring", "ready", "scheduled"];
+export const configurableStatuses: BattleStatus[] = ["draft", "published"];
 
 export const statusMeta: Record<BattleStatus, { label: string; color: string }> = {
   draft: { label: "Draft", color: "default" },
-  configuring: { label: "Configuring", color: "gold" },
-  ready: { label: "Ready", color: "green" },
-  scheduled: { label: "Scheduled", color: "blue" },
+  published: { label: "Published", color: "blue" },
   lobby: { label: "Lobby", color: "cyan" },
-  active: { label: "Active", color: "purple" },
+  live: { label: "Live", color: "purple" },
   completed: { label: "Completed", color: "default" },
-  cancelled: { label: "Cancelled", color: "red" },
 };
 
 export const formatDateTime = (value?: string | null) =>

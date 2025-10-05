@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { z } from 'zod';
 import {
+  assignBattleRole,
   createBattle,
   getBattleById,
   getBattles,
@@ -10,15 +11,16 @@ import {
   updateBattle,
   type BattleStartMode,
 } from '../services/battleService.js';
+import { resolveOptionalUser } from '../utils/authentication.js';
 
 const startModeSchema = z.enum(['manual', 'scheduled']);
 
-const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled', 'lobby']);
+const battleStatusSchema = z.enum(['draft', 'published', 'lobby', 'live', 'completed']);
 
-const participantRoleSchema = z.enum(['host', 'player', 'spectator']);
+const participantRoleSchema = z.enum(['owner', 'admin', 'editor', 'player', 'spectator']);
 
 const battleIdParamSchema = z.object({
-  battleId: z.string().min(1, 'battleId is required'),
+  battleId: z.string().uuid('battleId must be a valid UUID'),
 });
 
 const createBattleSchema = z
@@ -64,6 +66,13 @@ const joinBattleSchema = z
   })
   .strict();
 
+const assignBattleRoleSchema = z
+  .object({
+    userId: z.string().uuid('userId must be a valid UUID'),
+    role: participantRoleSchema.refine((role) => role !== 'owner', 'Cannot assign the owner role'),
+  })
+  .strict();
+
 const parseStartDate = (value: string | null | undefined): Date | null | undefined => {
   if (value === undefined) {
     return undefined;
@@ -83,7 +92,12 @@ const parseStartDate = (value: string | null | undefined): Date | null | undefin
 
 export const listBattlesHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const battles = await getBattles();
+    const user = req.user ?? (await resolveOptionalUser(req));
+    if (user) {
+      req.user = user;
+    }
+
+    const battles = await getBattles(user?.id);
     res.json({ battles });
   } catch (error) {
     next(error);
@@ -93,7 +107,12 @@ export const listBattlesHandler = async (req: Request, res: Response, next: Next
 export const getBattleHandler = async (req: Request<{ battleId: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { battleId } = battleIdParamSchema.parse(req.params);
-    const battle = await getBattleById(battleId);
+    const user = req.user ?? (await resolveOptionalUser(req));
+    if (user) {
+      req.user = user;
+    }
+
+    const battle = await getBattleById(battleId, user?.id);
     res.json({ battle });
   } catch (error) {
     next(error);
@@ -102,6 +121,10 @@ export const getBattleHandler = async (req: Request<{ battleId: string }>, res: 
 
 export const createBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
     const payload = createBattleSchema.parse(req.body);
     const startDate = parseStartDate(payload.scheduledStartAt ?? undefined);
 
@@ -111,6 +134,7 @@ export const createBattleHandler = async (req: Request, res: Response, next: Nex
       configuration: payload.configuration,
       startMode: payload.startMode as BattleStartMode,
       scheduledStartAt: startDate ?? null,
+      ownerId: req.user.id,
     });
 
     res.status(201).json({ battle });
@@ -121,10 +145,15 @@ export const createBattleHandler = async (req: Request, res: Response, next: Nex
 
 export const updateBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
     const payload = updateBattleSchema.parse(req.body);
     const startDate = parseStartDate(payload.scheduledStartAt ?? undefined);
 
-    const battle = await updateBattle(req.params.battleId, {
+    const battle = await updateBattle(battleId, req.user.id, {
       name: payload.name,
       shortDescription: payload.shortDescription ?? undefined,
       configuration: payload.configuration,
@@ -141,7 +170,12 @@ export const updateBattleHandler = async (req: Request, res: Response, next: Nex
 
 export const startBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const battle = await startBattle(req.params.battleId);
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const battle = await startBattle(battleId, req.user.id);
     res.json({ battle });
   } catch (error) {
     next(error);
@@ -155,14 +189,36 @@ export const joinBattleHandler = async (req: Request, res: Response, next: NextF
     }
 
     const payload = joinBattleSchema.parse(req.body ?? {});
+    const { battleId } = battleIdParamSchema.parse(req.params);
     const result = await joinBattle({
-      battleId: req.params.battleId,
+      battleId,
       userId: req.user.id,
       role: payload.role,
     });
 
     const statusCode = result.wasCreated ? 201 : 200;
     res.status(statusCode).json({ participant: result.participant, wasCreated: result.wasCreated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const assignBattleRoleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const payload = assignBattleRoleSchema.parse(req.body ?? {});
+    const participant = await assignBattleRole({
+      battleId,
+      actorUserId: req.user.id,
+      targetUserId: payload.userId,
+      role: payload.role,
+    });
+
+    res.status(200).json({ participant });
   } catch (error) {
     next(error);
   }

@@ -288,15 +288,7 @@ export class AuthApi {
   }
 }
 
-export type BattleStatus =
-  | 'draft'
-  | 'configuring'
-  | 'lobby'
-  | 'ready'
-  | 'scheduled'
-  | 'active'
-  | 'completed'
-  | 'cancelled';
+export type BattleStatus = 'draft' | 'published' | 'lobby' | 'live' | 'completed';
 
 export type BattleStartMode = 'manual' | 'scheduled';
 
@@ -309,11 +301,12 @@ export interface BattleRecord {
   autoStart: boolean;
   scheduledStartAt: string | null;
   startedAt: string | null;
+  ownerId: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type BattleParticipantRole = 'host' | 'player' | 'spectator';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player' | 'spectator';
 
 export interface BattleParticipantRecord {
   id: string;
@@ -384,6 +377,15 @@ export interface JoinBattleResponsePayload {
   wasCreated: boolean;
 }
 
+export interface AssignBattleRoleRequestPayload {
+  userId: string;
+  role: Exclude<BattleParticipantRole, 'owner'>;
+}
+
+export interface AssignBattleRoleResponsePayload {
+  participant: BattleParticipantRecord;
+}
+
 interface BattleRoutesConfig {
   base: string;
 }
@@ -417,6 +419,13 @@ export class BattleApi {
 
   joinBattle(battleId: string, payload: JoinBattleRequestPayload = {}) {
     return this.client.post<JoinBattleResponsePayload>(`${this.routes.base}/${battleId}/join`, payload);
+  }
+
+  assignRole(battleId: string, payload: AssignBattleRoleRequestPayload) {
+    return this.client.post<AssignBattleRoleResponsePayload>(
+      `${this.routes.base}/${battleId}/participants`,
+      payload,
+    );
   }
 
   public getBattle(battleId: string) {

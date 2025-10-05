@@ -1,15 +1,7 @@
 import type { QueryResult } from 'pg';
 import { getPool } from './index.js';
 
-export type BattleStatus =
-  | 'draft'
-  | 'configuring'
-  | 'lobby'
-  | 'scheduled'
-  | 'ready'
-  | 'active'
-  | 'completed'
-  | 'cancelled';
+export type BattleStatus = 'draft' | 'published' | 'lobby' | 'live' | 'completed';
 
 export type DbBattleRow = {
   id: string;
@@ -20,6 +12,7 @@ export type DbBattleRow = {
   auto_start: boolean;
   scheduled_start_at: Date | null;
   started_at: Date | null;
+  owner_id: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -33,6 +26,7 @@ export type CreateBattlePayload = {
   autoStart: boolean;
   scheduledStartAt?: Date | null;
   startedAt?: Date | null;
+  ownerId: string;
 };
 
 export type UpdateBattlePayload = Partial<{
@@ -43,6 +37,7 @@ export type UpdateBattlePayload = Partial<{
   autoStart: boolean;
   scheduledStartAt: Date | null;
   startedAt: Date | null;
+  ownerId: string;
 }>;
 
 const columnMap: Record<keyof UpdateBattlePayload, string> = {
@@ -53,6 +48,7 @@ const columnMap: Record<keyof UpdateBattlePayload, string> = {
   autoStart: 'auto_start',
   scheduledStartAt: 'scheduled_start_at',
   startedAt: 'started_at',
+  ownerId: 'owner_id',
 };
 
 export const insertBattle = async (payload: CreateBattlePayload): Promise<DbBattleRow> => {
@@ -67,9 +63,10 @@ export const insertBattle = async (payload: CreateBattlePayload): Promise<DbBatt
         configuration,
         auto_start,
         scheduled_start_at,
-        started_at
+        started_at,
+        owner_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `,
     [
@@ -81,6 +78,7 @@ export const insertBattle = async (payload: CreateBattlePayload): Promise<DbBatt
       payload.autoStart,
       payload.scheduledStartAt ?? null,
       payload.startedAt ?? null,
+      payload.ownerId,
     ],
   );
 
@@ -120,7 +118,7 @@ export const listScheduledBattles = async (): Promise<DbBattleRow[]> => {
     `
       SELECT *
       FROM battles
-      WHERE auto_start = TRUE AND scheduled_start_at IS NOT NULL AND status IN ('scheduled', 'lobby')
+      WHERE auto_start = TRUE AND scheduled_start_at IS NOT NULL AND status IN ('published', 'lobby')
       ORDER BY scheduled_start_at ASC NULLS LAST
     `,
   );

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { insertUser } from '@rc01/db';
 import {
   battleEvents,
+  assignBattleRole,
   createBattle,
   joinBattle,
   startBattle,
@@ -42,49 +43,53 @@ describe('battleService lobby state', () => {
       lobbyOpened.push(battle);
     });
 
+    const owner = await createUser({ username: 'battle-owner' });
     const created = await createBattle({
       name: 'Lobby Battle',
       startMode: 'manual',
       configuration: { allowSpectators: true },
+      ownerId: owner.id,
     });
 
-    const ready = await updateBattle(created.id, { status: 'ready' });
-    expect(ready.status).toBe('ready');
+    const published = await updateBattle(created.id, owner.id, { status: 'published' });
+    expect(published.status).toBe('published');
 
-    const lobby = await updateBattle(created.id, { status: 'lobby' });
+    const lobby = await updateBattle(created.id, owner.id, { status: 'lobby' });
     expect(lobby.status).toBe('lobby');
 
     expect(lobbyOpened).toHaveLength(1);
     expect(lobbyOpened[0].id).toBe(created.id);
 
-    await expect(updateBattle(created.id, { name: 'New Name' })).rejects.toMatchObject({ status: 409 });
+    await expect(updateBattle(created.id, owner.id, { name: 'New Name' })).rejects.toMatchObject({ status: 409 });
   });
 
-  it('enforces join guards for players while allowing host enrollment and emits join events', async () => {
-    const host = await createUser({ username: 'battle-host' });
+  it('enforces join guards for players while allowing owners to control access and emits join events', async () => {
+    const owner = await createUser({ username: 'battle-owner' });
     const player = await createUser({ username: 'battle-player' });
-    const otherHost = await createUser({ username: 'other-host' });
+    const challenger = await createUser({ username: 'battle-challenger' });
 
     const created = await createBattle({
       name: 'Join Battle',
       startMode: 'manual',
       configuration: {},
+      ownerId: owner.id,
     });
-
-    await updateBattle(created.id, { status: 'ready' });
 
     const joinEvents: { battleId: string }[] = [];
     battleEvents.on('battle.participant-joined', ({ battleId }) => {
       joinEvents.push({ battleId });
     });
 
-    const hostJoin = await joinBattle({ battleId: created.id, userId: host.id, role: 'host' });
-    expect(hostJoin.wasCreated).toBe(true);
-    expect(hostJoin.participant.role).toBe('host');
+    const ownerJoin = await joinBattle({ battleId: created.id, userId: owner.id });
+    expect(ownerJoin.wasCreated).toBe(false);
+    expect(ownerJoin.participant.role).toBe('owner');
 
     await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 409 });
 
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattle(created.id, owner.id, { status: 'published' });
+    await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 409 });
+
+    await updateBattle(created.id, owner.id, { status: 'lobby' });
 
     const playerJoin = await joinBattle({ battleId: created.id, userId: player.id });
     expect(playerJoin.wasCreated).toBe(true);
@@ -93,21 +98,53 @@ describe('battleService lobby state', () => {
     const duplicateJoin = await joinBattle({ battleId: created.id, userId: player.id });
     expect(duplicateJoin.wasCreated).toBe(false);
 
-    await expect(joinBattle({ battleId: created.id, userId: otherHost.id, role: 'host' })).rejects.toMatchObject({ status: 409 });
+    await expect(joinBattle({ battleId: created.id, userId: challenger.id, role: 'owner' })).rejects.toMatchObject({ status: 403 });
 
-    expect(joinEvents.filter((event) => event.battleId === created.id)).toHaveLength(2);
+    expect(joinEvents.filter((event) => event.battleId === created.id)).toHaveLength(1);
   });
 
   it('allows starting battles from the lobby state', async () => {
+    const owner = await createUser({ username: 'battle-owner' });
     const created = await createBattle({
       name: 'Startable Battle',
       startMode: 'manual',
+      ownerId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattle(created.id, owner.id, { status: 'published' });
+    await updateBattle(created.id, owner.id, { status: 'lobby' });
 
-    const active = await startBattle(created.id);
-    expect(active.status).toBe('active');
+    const live = await startBattle(created.id, owner.id);
+    expect(live.status).toBe('live');
+  });
+
+  it('allows owners to assign elevated roles while restricting non-admins', async () => {
+    const owner = await createUser({ username: 'role-owner' });
+    const editorUser = await createUser({ username: 'role-editor' });
+    const outsider = await createUser({ username: 'role-outsider' });
+
+    const created = await createBattle({
+      name: 'Role Battle',
+      startMode: 'manual',
+      ownerId: owner.id,
+    });
+
+    const editorParticipant = await assignBattleRole({
+      battleId: created.id,
+      actorUserId: owner.id,
+      targetUserId: editorUser.id,
+      role: 'editor',
+    });
+
+    expect(editorParticipant.role).toBe('editor');
+
+    await expect(
+      assignBattleRole({
+        battleId: created.id,
+        actorUserId: editorUser.id,
+        targetUserId: outsider.id,
+        role: 'player',
+      }),
+    ).rejects.toMatchObject({ status: 403 });
   });
 });

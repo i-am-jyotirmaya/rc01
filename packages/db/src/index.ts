@@ -58,11 +58,21 @@ export const runCoreMigrations = async (): Promise<void> => {
         auto_start BOOLEAN NOT NULL DEFAULT FALSE,
         scheduled_start_at TIMESTAMPTZ,
         started_at TIMESTAMPTZ,
+        owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CHECK (status IN ('draft', 'configuring', 'scheduled', 'ready', 'lobby', 'active', 'completed', 'cancelled'))
+        CHECK (status IN ('draft', 'published', 'lobby', 'live', 'completed'))
       );
     `);
+
+    await client.query(
+      "ALTER TABLE battles ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE CASCADE",
+    );
+    await client.query("CREATE INDEX IF NOT EXISTS idx_battles_owner ON battles (owner_id);");
+    await client.query("ALTER TABLE battles DROP CONSTRAINT IF EXISTS battles_status_check;");
+    await client.query(
+      "ALTER TABLE battles ADD CONSTRAINT battles_status_check CHECK (status IN ('draft', 'published', 'lobby', 'live', 'completed'))",
+    );
 
     await client.query('CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);');
     await client.query(
@@ -75,12 +85,19 @@ export const runCoreMigrations = async (): Promise<void> => {
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         role VARCHAR(16) NOT NULL DEFAULT 'player',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CHECK (role IN ('host', 'player', 'spectator')),
+        CHECK (role IN ('owner', 'admin', 'editor', 'player', 'spectator')),
         UNIQUE (battle_id, user_id)
       );
     `);
     await client.query(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_host ON battle_participants (battle_id) WHERE role = 'host';",
+      "ALTER TABLE battle_participants DROP CONSTRAINT IF EXISTS battle_participants_role_check;",
+    );
+    await client.query(
+      "ALTER TABLE battle_participants ADD CONSTRAINT battle_participants_role_check CHECK (role IN ('owner', 'admin', 'editor', 'player', 'spectator'))",
+    );
+    await client.query("DROP INDEX IF EXISTS idx_battle_participants_host;");
+    await client.query(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
     );
     await client.query('COMMIT');
   } catch (error) {

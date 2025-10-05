@@ -1,7 +1,7 @@
 import type { QueryResult } from 'pg';
 import { getPool } from './index.js';
 
-export type BattleParticipantRole = 'host' | 'player' | 'spectator';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player' | 'spectator';
 
 export type DbBattleParticipantRow = {
   id: string;
@@ -85,6 +85,40 @@ export const listBattleParticipantsByBattle = async (
       ORDER BY created_at ASC
     `,
     [battleId],
+  );
+
+  return result.rows;
+};
+
+export const updateBattleParticipantRole = async (
+  battleId: string,
+  userId: string,
+  role: BattleParticipantRole,
+): Promise<DbBattleParticipantRow | null> => {
+  const pool = getPool();
+  const result: QueryResult<DbBattleParticipantRow> = await pool.query(
+    `
+      UPDATE battle_participants
+      SET role = $1, created_at = created_at
+      WHERE battle_id = $2 AND user_id = $3
+      RETURNING *
+    `,
+    [role, battleId, userId],
+  );
+
+  return result.rows[0] ?? null;
+};
+
+export const listBattleParticipantsByUser = async (userId: string): Promise<DbBattleParticipantRow[]> => {
+  const pool = getPool();
+  const result: QueryResult<DbBattleParticipantRow> = await pool.query(
+    `
+      SELECT *
+      FROM battle_participants
+      WHERE user_id = $1
+      ORDER BY created_at ASC
+    `,
+    [userId],
   );
 
   return result.rows;

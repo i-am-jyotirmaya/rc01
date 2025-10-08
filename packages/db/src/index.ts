@@ -1,96 +1,84 @@
-import { Pool, PoolConfig } from 'pg';
+import { PrismaPostgresDatabase } from './prisma/postgresDatabase.js';
+import { PrismaSqliteDatabase } from './prisma/sqliteDatabase.js';
+import type { DatabaseClient } from './databaseClient.js';
+import type { DatabaseInitOptions } from './types.js';
 
-let pool: Pool | null = null;
+let client: DatabaseClient | null = null;
 
-export const initDb = (config: PoolConfig): Pool => {
-  if (!pool) {
-    pool = new Pool(config);
+const parseBoolean = (value: string | undefined): boolean | undefined => {
+  if (value === undefined) {
+    return undefined;
   }
 
-  return pool;
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return undefined;
 };
 
-export const getPool = (): Pool => {
-  if (!pool) {
-    throw new Error('Database pool has not been initialized. Call initDb first.');
+const resolveDatabaseUrl = (usePostgres: boolean, explicitUrl?: string): string | undefined => {
+  if (explicitUrl) {
+    return explicitUrl;
   }
 
-  return pool;
+  if (usePostgres) {
+    return process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+  }
+
+  return process.env.SQLITE_DATABASE_URL ?? process.env.DATABASE_URL ?? 'file:./dev.db';
 };
 
-export const setPool = (customPool: Pool | null): void => {
-  pool = customPool;
+export const initDb = (options: DatabaseInitOptions = {}): DatabaseClient => {
+  if (client) {
+    return client;
+  }
+
+  const envPreference = parseBoolean(process.env.USE_POSTGRES);
+  const usePostgres = options.usePostgres ?? envPreference ?? false;
+  const databaseUrl = resolveDatabaseUrl(usePostgres, options.databaseUrl);
+
+  if (!databaseUrl) {
+    throw new Error('Database URL is not configured. Provide databaseUrl or set DATABASE_URL.');
+  }
+
+  process.env.DATABASE_PROVIDER = usePostgres ? 'postgresql' : 'sqlite';
+  process.env.DATABASE_URL = databaseUrl;
+
+  client = usePostgres
+    ? new PrismaPostgresDatabase(databaseUrl)
+    : new PrismaSqliteDatabase(databaseUrl);
+
+  return client;
+};
+
+export const getDb = (): DatabaseClient => {
+  if (!client) {
+    throw new Error('Database has not been initialized. Call initDb first.');
+  }
+
+  return client;
+};
+
+export const setDatabaseClient = (customClient: DatabaseClient | null): void => {
+  client = customClient;
 };
 
 export const closeDb = async (): Promise<void> => {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (client) {
+    await client.disconnect();
+    client = null;
   }
 };
 
 export const runCoreMigrations = async (): Promise<void> => {
-  const client = await getPool().connect();
-
-  try {
-    await client.query('BEGIN');
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY,
-        username VARCHAR(64) UNIQUE NOT NULL,
-        first_name VARCHAR(120) NOT NULL,
-        last_name VARCHAR(120) NOT NULL,
-        password_hash TEXT NOT NULL,
-        photo_path TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `);
-
-    await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);');
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS battles (
-        id UUID PRIMARY KEY,
-        name VARCHAR(160) NOT NULL,
-        short_description TEXT,
-        status VARCHAR(32) NOT NULL DEFAULT 'draft',
-        configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
-        auto_start BOOLEAN NOT NULL DEFAULT FALSE,
-        scheduled_start_at TIMESTAMPTZ,
-        started_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CHECK (status IN ('draft', 'configuring', 'scheduled', 'ready', 'lobby', 'active', 'completed', 'cancelled'))
-      );
-    `);
-
-    await client.query('CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);');
-    await client.query(
-      'CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at) WHERE scheduled_start_at IS NOT NULL;',
-    );
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS battle_participants (
-        id UUID PRIMARY KEY,
-        battle_id UUID NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        role VARCHAR(16) NOT NULL DEFAULT 'player',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CHECK (role IN ('host', 'player', 'spectator')),
-        UNIQUE (battle_id, user_id)
-      );
-    `);
-    await client.query(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_host ON battle_participants (battle_id) WHERE role = 'host';",
-    );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  await getDb().runMigrations();
 };
 
+export * from './types.js';
 export * from './users.js';
 export * from './battles.js';
 export * from './battleParticipants.js';

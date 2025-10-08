@@ -45,7 +45,6 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.2",
-    "pg-mem": "^3.0.5",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.6",
     "vitest": "^2.1.4"

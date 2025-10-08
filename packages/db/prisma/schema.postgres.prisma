@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/postgres"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BattleStatus {
+  draft
+  configuring
+  lobby
+  scheduled
+  ready
+  active
+  completed
+  cancelled
+}
+
+enum BattleParticipantRole {
+  host
+  player
+  spectator
+}
+
+model User {
+  id           String   @id @db.Uuid
+  username     String   @unique
+  firstName    String   @map("first_name") @db.VarChar(120)
+  lastName     String   @map("last_name") @db.VarChar(120)
+  passwordHash String   @map("password_hash")
+  photoPath    String?  @map("photo_path")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  participants BattleParticipant[]
+
+  @@map("users")
+  @@index([username], map: "idx_users_username")
+}
+
+model Battle {
+  id               String             @id @db.Uuid
+  name             String             @db.VarChar(160)
+  shortDescription String?            @map("short_description")
+  status           BattleStatus
+  configuration    Json               @db.JsonB
+  autoStart        Boolean            @map("auto_start")
+  scheduledStartAt DateTime?          @map("scheduled_start_at") @db.Timestamptz(6)
+  startedAt        DateTime?          @map("started_at") @db.Timestamptz(6)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  participants     BattleParticipant[]
+
+  @@map("battles")
+  @@index([status], map: "idx_battles_status")
+  @@index([scheduledStartAt], map: "idx_battles_scheduled_start")
+}
+
+model BattleParticipant {
+  id        String                 @id @db.Uuid
+  battleId  String                 @map("battle_id") @db.Uuid
+  userId    String                 @map("user_id") @db.Uuid
+  role      BattleParticipantRole
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  battle    Battle                 @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("battle_participants")
+  @@unique([battleId, userId])
+  @@index([battleId], map: "idx_battle_participants_battle_id")
+}

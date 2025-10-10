@@ -1,3 +1,4 @@
+import http from 'node:http';
 import path from 'node:path';
 import { initDb, runCoreMigrations } from '@rc01/db';
 import { env } from './config/env.js';
@@ -5,6 +6,7 @@ import { app } from './app.js';
 import { ensureDirectory } from './utils/filesystem.js';
 import { logger } from './utils/logger.js';
 import { initializeBattleScheduling } from './services/battleService.js';
+import { initializeBattleRealtime } from './realtime/socketServer.js';
 
 const parseBoolean = (value: string | undefined): boolean => {
   if (!value) {
@@ -37,7 +39,10 @@ const startServer = async (): Promise<void> => {
     await runCoreMigrations();
     await initializeBattleScheduling();
 
-    app.listen(env.port, () => {
+    const server = http.createServer(app);
+    initializeBattleRealtime(server);
+
+    server.listen(env.port, () => {
       logger.info(`Backend listening on port ${env.port}`);
     });
   } catch (error) {

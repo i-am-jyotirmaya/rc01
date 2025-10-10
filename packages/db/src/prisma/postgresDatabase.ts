@@ -2,9 +2,12 @@ import { PrismaClient } from "../generated/postgres/index.js";
 import type { DatabaseClient, DatabaseKind } from "../databaseClient.js";
 import {
   mapBattle,
+  mapBattleInvite,
   mapBattleParticipant,
   mapUser,
   toBattleCreateData,
+  toBattleInviteCreateData,
+  toBattleInviteUpdateData,
   toBattleParticipantCreateData,
   toBattleParticipantUpdateData,
   toBattleUpdateData,
@@ -12,12 +15,15 @@ import {
 } from "./mappers.js";
 import type {
   BattleParticipantRole,
+  CreateBattleInvitePayload,
   CreateBattleParticipantPayload,
   CreateBattlePayload,
   CreateUserPayload,
+  DbBattleInviteRow,
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleInvitePayload,
   UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from "../types.js";
@@ -181,6 +187,36 @@ export class PrismaPostgresDatabase implements DatabaseClient {
     },
   };
 
+  public readonly battleInvites = {
+    insert: async (payload: CreateBattleInvitePayload): Promise<DbBattleInviteRow> => {
+      const created = await this.prisma.battleInvite.create({
+        data: toBattleInviteCreateData(payload),
+      });
+      return mapBattleInvite(created);
+    },
+
+    findByToken: async (token: string): Promise<DbBattleInviteRow | null> => {
+      const found = await this.prisma.battleInvite.findUnique({ where: { token } });
+      return found ? mapBattleInvite(found) : null;
+    },
+
+    listByBattle: async (battleId: string): Promise<DbBattleInviteRow[]> => {
+      const invites = await this.prisma.battleInvite.findMany({
+        where: { battleId },
+        orderBy: { createdAt: "desc" },
+      });
+      return invites.map(mapBattleInvite);
+    },
+
+    updateById: async (id: string, payload: UpdateBattleInvitePayload): Promise<DbBattleInviteRow> => {
+      const updated = await this.prisma.battleInvite.update({
+        where: { id },
+        data: toBattleInviteUpdateData(payload),
+      });
+      return mapBattleInvite(updated);
+    },
+  };
+
   public async runMigrations(): Promise<void> {
     await this.prisma.$transaction(async (tx: PrismaClient) => {
       await tx.$executeRawUnsafe(`
@@ -244,12 +280,14 @@ export class PrismaPostgresDatabase implements DatabaseClient {
           id UUID PRIMARY KEY,
           battle_id UUID NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
           user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          role VARCHAR(16) NOT NULL DEFAULT 'player',
+          role VARCHAR(16) NOT NULL DEFAULT 'user',
           status VARCHAR(16) NOT NULL DEFAULT 'pending',
+          is_contestant BOOLEAN NOT NULL DEFAULT FALSE,
           accepted_at TIMESTAMPTZ,
+          left_at TIMESTAMPTZ,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          CHECK (role IN ('owner', 'admin', 'editor', 'player')),
-          CHECK (status IN ('pending', 'accepted')),
+          CHECK (role IN ('owner', 'admin', 'editor', 'user')),
+          CHECK (status IN ('pending', 'accepted', 'left')),
           UNIQUE (battle_id, user_id)
         );
       `);
@@ -283,6 +321,57 @@ export class PrismaPostgresDatabase implements DatabaseClient {
 
       await tx.$executeRawUnsafe(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
+      );
+
+      await tx.$executeRawUnsafe(
+        "CREATE INDEX IF NOT EXISTS idx_battle_participants_battle_id ON battle_participants (battle_id);",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS is_contestant BOOLEAN NOT NULL DEFAULT FALSE;",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS left_at TIMESTAMPTZ;",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ALTER COLUMN role SET DEFAULT 'user';",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants DROP CONSTRAINT IF EXISTS battle_participants_role_check;",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD CONSTRAINT battle_participants_role_check CHECK (role IN ('owner', 'admin', 'editor', 'user'));",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants DROP CONSTRAINT IF EXISTS battle_participants_status_check;",
+      );
+
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD CONSTRAINT battle_participants_status_check CHECK (status IN ('pending', 'accepted', 'left'));",
+      );
+
+      await tx.$executeRawUnsafe(
+        "UPDATE battle_participants SET role = 'user' WHERE role = 'player';",
+      );
+
+      await tx.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS battle_invites (
+          id UUID PRIMARY KEY,
+          battle_id UUID NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+          token TEXT NOT NULL UNIQUE,
+          created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          revoked_at TIMESTAMPTZ
+        );
+      `);
+
+      await tx.$executeRawUnsafe(
+        "CREATE INDEX IF NOT EXISTS idx_battle_invites_battle_id ON battle_invites (battle_id);",
       );
     });
   }

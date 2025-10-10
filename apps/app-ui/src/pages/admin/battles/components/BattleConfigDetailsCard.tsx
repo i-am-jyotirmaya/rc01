@@ -30,9 +30,10 @@ const difficultyOptions = [
   { label: "Expert", value: "expert" },
 ];
 
-const privacyOptions = [
+const visibilityOptions = [
   { label: "Public", value: "public" },
-  { label: "Invite only", value: "invite" },
+  { label: "Invite only", value: "invite-only" },
+  { label: "Password", value: "password" },
 ];
 
 const languageOptions = ["typescript", "python", "rust", "go", "java"].map((language) => ({
@@ -97,23 +98,25 @@ export const BattleConfigDetailsCard: FC<BattleConfigDetailsCardProps> = ({
             onChange={(value: string | undefined) => onChange({ difficulty: value ?? undefined })}
           />
         </Form.Item>
-        <Form.Item label="Max players">
+        <Form.Item label="Max contestants">
           <InputNumber
             min={2}
             max={200}
             style={{ width: "100%" }}
-            value={draft.maxPlayers ?? undefined}
-            onChange={(value) => onChange({ maxPlayers: typeof value === "number" ? value : null })}
+            value={draft.maxContestants ?? undefined}
+            onChange={(value) =>
+              onChange({ maxContestants: typeof value === "number" ? value : null })
+            }
           />
         </Form.Item>
-        <Form.Item label="Privacy">
+        <Form.Item label="Visibility">
           <Radio.Group
             optionType="button"
             buttonStyle="solid"
-            value={draft.privacy}
-            onChange={(event) => onChange({ privacy: event.target.value })}
+            value={draft.visibility}
+            onChange={(event) => onChange({ visibility: event.target.value })}
           >
-            {privacyOptions.map((option) => (
+            {visibilityOptions.map((option) => (
               <Radio.Button key={option.value} value={option.value}>
                 {option.label}
               </Radio.Button>

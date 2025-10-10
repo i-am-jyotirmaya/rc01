@@ -18,6 +18,7 @@ model User {
   photoPath    String?  @map("photo_path")
   createdAt    DateTime @default(now()) @map("created_at")
   participants BattleParticipant[]
+  createdInvites BattleInvite[] @relation("UserInvites")
 
   @@map("users")
   @@index([username], map: "idx_users_username")
@@ -36,6 +37,7 @@ model Battle {
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
   participants     BattleParticipant[]
+  invites          BattleInvite[] @relation("BattleInvites")
 
   @@map("battles")
   @@index([status], map: "idx_battles_status")
@@ -46,9 +48,11 @@ model BattleParticipant {
   id         String   @id
   battleId   String   @map("battle_id")
   userId     String   @map("user_id")
-  role       String   @map("role")
+  role       String   @default("user") @map("role")
   status     String   @default("pending") @map("status")
+  isContestant Boolean @default(false) @map("is_contestant")
   acceptedAt DateTime? @map("accepted_at")
+  leftAt     DateTime? @map("left_at")
   createdAt  DateTime @default(now()) @map("created_at")
   battle     Battle   @relation(fields: [battleId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -56,4 +60,18 @@ model BattleParticipant {
   @@map("battle_participants")
   @@unique([battleId, userId])
   @@index([battleId], map: "idx_battle_participants_battle_id")
+}
+
+model BattleInvite {
+  id            String   @id
+  battleId      String   @map("battle_id")
+  token         String   @unique
+  createdByUserId String @map("created_by_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  revokedAt     DateTime? @map("revoked_at")
+  battle        Battle   @relation("BattleInvites", fields: [battleId], references: [id], onDelete: Cascade)
+  creator       User     @relation("UserInvites", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@map("battle_invites")
+  @@index([battleId], map: "idx_battle_invites_battle_id")
 }

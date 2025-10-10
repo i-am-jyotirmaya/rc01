@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 
-export type PrivacySetting = "public" | "invite";
+export type VisibilitySetting = "public" | "invite-only" | "password";
 
 export type StartMode = "manual" | "scheduled";
 
@@ -9,8 +9,8 @@ export interface HostBattleFormValues {
   shortDescription?: string;
   gameMode?: string;
   difficulty?: string;
-  maxPlayers?: number;
-  privacy: PrivacySetting;
+  maxContestants?: number;
+  visibility: VisibilitySetting;
   allowSpectators: boolean;
   voiceChat: boolean;
   startMode: StartMode;

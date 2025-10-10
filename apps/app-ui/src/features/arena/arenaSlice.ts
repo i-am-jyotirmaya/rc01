@@ -98,7 +98,7 @@ const initialState: ArenaState = {
         icon: "team",
         title: "Delight communities",
         description:
-          "Keep players engaged with brackets, team modes, and shareable recaps.",
+          "Keep participants engaged with brackets, team modes, and shareable recaps.",
       },
     ],
     feature: {

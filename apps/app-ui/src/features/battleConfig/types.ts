@@ -23,8 +23,8 @@ export interface BattleConfigDraft {
   shortDescription: string;
   gameMode?: string;
   difficulty?: string;
-  maxPlayers?: number | null;
-  privacy: "public" | "invite";
+  maxContestants?: number | null;
+  visibility: "public" | "invite-only" | "password";
   startMode: "manual" | "scheduled";
   scheduledStartAt?: string | null;
   allowSpectators: boolean;
@@ -45,5 +45,6 @@ export interface BattleConfigDraft {
   rematchDefaults: boolean;
   joinQueueSize?: number | null;
   password?: string;
+  passwordRequired: boolean;
   linkExpiry?: string;
 }

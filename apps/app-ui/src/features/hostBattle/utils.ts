@@ -42,7 +42,8 @@ export const extractBattle = (response: unknown): BattleRecord | undefined => {
 export const isConfigurableStatus = (status: BattleStatus) => configurableStatuses.includes(status);
 
 export const baseFormDefaults: Partial<HostBattleFormValues> = {
-  privacy: "public",
+  visibility: "public",
+  maxContestants: 2,
   allowSpectators: true,
   voiceChat: false,
   startMode: "manual",
@@ -102,22 +103,26 @@ export const buildBattlePayload = (
         : null
       : null;
 
-  const configurationInput = {
-    ...values,
-    battleName: sanitizedName,
-    shortDescription: shortDescription || undefined,
-    startMode,
-    scheduledStartAt,
+  const {
+    shortDescription: _ignoredShortDescription,
+    startMode: _ignoredStartMode,
+    scheduledStartAt: _ignoredScheduled,
+    password,
+    visibility,
+    ...restConfiguration
+  } = values;
+
+  const configuration: Record<string, unknown> = {
+    ...restConfiguration,
+    visibility,
   };
 
-  const configuration = JSON.parse(JSON.stringify(configurationInput)) as Record<string, unknown>;
-
-  if (!shortDescription) {
-    delete configuration.shortDescription;
+  if (visibility === "password" && password) {
+    configuration.password = password;
   }
 
-  if (startMode !== "scheduled") {
-    configuration.scheduledStartAt = null;
+  if (startMode === "scheduled") {
+    configuration.scheduledStartAt = scheduledStartAt;
   }
 
   const createPayload: CreateBattleRequestPayload = {
@@ -180,6 +185,18 @@ export const extractFormValuesFromBattle = (
 
   if (typeof merged.rematchDefaults !== "boolean") {
     merged.rematchDefaults = false;
+  }
+
+  if (typeof merged.visibility !== "string") {
+    merged.visibility = "public";
+  }
+
+  if (typeof (configuration as { passwordRequired?: unknown }).passwordRequired === "boolean") {
+    merged.password = undefined;
+  }
+
+  if (typeof (configuration as { maxContestants?: unknown }).maxContestants === "number") {
+    merged.maxContestants = (configuration as { maxContestants: number }).maxContestants;
   }
 
   return merged;

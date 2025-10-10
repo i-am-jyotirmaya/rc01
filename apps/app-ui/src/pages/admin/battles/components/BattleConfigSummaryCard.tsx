@@ -59,19 +59,25 @@ export const BattleConfigSummaryCard: FC<BattleConfigSummaryCardProps> = ({
             <Typography.Text type="secondary">Set difficulty</Typography.Text>
           )}
         </Descriptions.Item>
-        <Descriptions.Item label="Max players">
-          {typeof draft.maxPlayers === "number" ? (
-            draft.maxPlayers
+        <Descriptions.Item label="Max contestants">
+          {typeof draft.maxContestants === "number" ? (
+            draft.maxContestants
           ) : (
             <Typography.Text type="secondary">Define a cap</Typography.Text>
           )}
         </Descriptions.Item>
         <Descriptions.Item label="Start mode">{draft.startMode}</Descriptions.Item>
         <Descriptions.Item label="Scheduled start">{scheduleLabel}</Descriptions.Item>
-        <Descriptions.Item label="Privacy">
+        <Descriptions.Item label="Visibility">
           <Space size="small">
-            <Typography.Text>{draft.privacy === "invite" ? "Invite only" : "Public"}</Typography.Text>
-            {draft.privacy === "invite" && draft.password ? (
+            <Typography.Text>
+              {draft.visibility === "invite-only"
+                ? "Invite only"
+                : draft.visibility === "password"
+                  ? "Password required"
+                  : "Public"}
+            </Typography.Text>
+            {draft.visibility === "password" && (draft.passwordRequired || draft.password) ? (
               <Tag color="gold">Password protected</Tag>
             ) : null}
           </Space>

@@ -316,9 +316,9 @@ export interface BattleRecord {
   updatedAt: string;
 }
 
-export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'user';
 
-export type BattleParticipantStatus = 'pending' | 'accepted';
+export type BattleParticipantStatus = 'pending' | 'accepted' | 'left';
 
 export type BattlePermission =
   | 'battle.view'
@@ -340,6 +340,17 @@ export interface BattleParticipantRecord {
   permissions: BattlePermission[];
   invitedAt: string;
   joinedAt: string | null;
+  leftAt: string | null;
+  isContestant: boolean;
+}
+
+export interface BattleInviteRecord {
+  id: string;
+  battleId: string;
+  token: string;
+  createdByUserId: string;
+  createdAt: string;
+  revokedAt: string | null;
 }
 
 export interface CreateBattleRequestPayload {
@@ -396,11 +407,46 @@ export interface ProblemResponsePayload {
 
 export interface JoinBattleRequestPayload {
   role?: BattleParticipantRole;
+  password?: string;
+  inviteToken?: string;
 }
 
 export interface JoinBattleResponsePayload {
   participant: BattleParticipantRecord;
   wasCreated: boolean;
+}
+
+export interface ListBattleParticipantsResponsePayload {
+  participants: BattleParticipantRecord[];
+}
+
+export interface LeaveBattleResponsePayload {
+  participant: BattleParticipantRecord;
+}
+
+export interface UpdateParticipantRoleRequestPayload {
+  targetUserId: string;
+  role: Exclude<BattleParticipantRole, 'owner'>;
+}
+
+export interface UpdateContestantsRequestPayload {
+  contestantUserIds: string[];
+}
+
+export interface UpdateContestantsResponsePayload {
+  contestants: BattleParticipantRecord[];
+}
+
+export interface CreateBattleInviteResponsePayload {
+  invite: BattleInviteRecord;
+}
+
+export interface ListBattleInvitesResponsePayload {
+  invites: BattleInviteRecord[];
+}
+
+export interface RevokeBattleInviteResponsePayload {
+  invite: BattleInviteRecord;
 }
 
 interface BattleRoutesConfig {
@@ -440,6 +486,43 @@ export class BattleApi {
 
   public getBattle(battleId: string) {
     return this.client.get<BattleResponsePayload>(`${this.routes.base}/${battleId}`);
+  }
+
+  listParticipants(battleId: string) {
+    return this.client.get<ListBattleParticipantsResponsePayload>(`${this.routes.base}/${battleId}/participants`);
+  }
+
+  leaveBattle(battleId: string) {
+    return this.client.post<LeaveBattleResponsePayload>(`${this.routes.base}/${battleId}/leave`);
+  }
+
+  updateParticipantRole(battleId: string, payload: UpdateParticipantRoleRequestPayload) {
+    return this.client.post<{ participant: BattleParticipantRecord }>(
+      `${this.routes.base}/${battleId}/participants/role`,
+      payload,
+    );
+  }
+
+  updateContestants(battleId: string, payload: UpdateContestantsRequestPayload) {
+    return this.client.put<UpdateContestantsResponsePayload>(
+      `${this.routes.base}/${battleId}/contestants`,
+      payload,
+    );
+  }
+
+  createInvite(battleId: string) {
+    return this.client.post<CreateBattleInviteResponsePayload>(`${this.routes.base}/${battleId}/invites`);
+  }
+
+  listInvites(battleId: string) {
+    return this.client.get<ListBattleInvitesResponsePayload>(`${this.routes.base}/${battleId}/invites`);
+  }
+
+  revokeInvite(battleId: string, inviteId: string) {
+    return this.client.post<RevokeBattleInviteResponsePayload>(
+      `${this.routes.base}/${battleId}/invites/revoke`,
+      { inviteId },
+    );
   }
 }
 

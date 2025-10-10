@@ -82,3 +82,4 @@ export * from './types.js';
 export * from './users.js';
 export * from './battles.js';
 export * from './battleParticipants.js';
+export * from './battleInvites.js';

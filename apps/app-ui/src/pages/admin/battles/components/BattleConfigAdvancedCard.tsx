@@ -96,7 +96,7 @@ export const BattleConfigAdvancedCard: FC<BattleConfigAdvancedCardProps> = ({ dr
             onChange={(value: string[]) => onChange({ powerUps: value })}
           />
         </Form.Item>
-        <Form.Item label="Player rating floor">
+        <Form.Item label="Participant rating floor">
           <InputNumber
             min={0}
             max={5000}
@@ -105,7 +105,7 @@ export const BattleConfigAdvancedCard: FC<BattleConfigAdvancedCardProps> = ({ dr
             onChange={(value) => onChange({ ratingFloor: typeof value === "number" ? value : null })}
           />
         </Form.Item>
-        <Form.Item label="Player rating ceiling">
+        <Form.Item label="Participant rating ceiling">
           <InputNumber
             min={0}
             max={5000}
@@ -151,8 +151,12 @@ export const BattleConfigAdvancedCard: FC<BattleConfigAdvancedCardProps> = ({ dr
         <Form.Item label="Password">
           <Input.Password
             allowClear
-            placeholder={draft.privacy === "invite" ? "Share a secure password" : "Invite only required"}
-            disabled={draft.privacy !== "invite"}
+            placeholder={
+              draft.visibility === "password"
+                ? "Share a secure password"
+                : "Password only required for password battles"
+            }
+            disabled={draft.visibility !== "password"}
             value={draft.password}
             onChange={(event) => onChange({ password: event.target.value })}
           />

@@ -21,7 +21,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({ form }) =>
     </Col>
     <Col {...fieldColProps}>
       <Form.Item name="shortDescription" label="Short description">
-        <Input placeholder="Add a quick pitch for players" allowClear />
+        <Input placeholder="Add a quick pitch for participants" allowClear />
       </Form.Item>
     </Col>
     <Col {...fieldColProps}>
@@ -45,15 +45,16 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({ form }) =>
       </Form.Item>
     </Col>
     <Col {...fieldColProps}>
-      <Form.Item name="maxPlayers" label="Max players">
+      <Form.Item name="maxContestants" label="Max contestants">
         <InputNumber min={2} max={100} style={{ width: "100%" }} />
       </Form.Item>
     </Col>
     <Col {...fieldColProps}>
-      <Form.Item name="privacy" label="Privacy">
+      <Form.Item name="visibility" label="Visibility">
         <Radio.Group optionType="button" buttonStyle="solid">
           <Radio.Button value="public">Public</Radio.Button>
-          <Radio.Button value="invite">Invite only</Radio.Button>
+          <Radio.Button value="invite-only">Invite only</Radio.Button>
+          <Radio.Button value="password">Password</Radio.Button>
         </Radio.Group>
       </Form.Item>
     </Col>

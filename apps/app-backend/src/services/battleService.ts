@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import createHttpError from 'http-errors';
+import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 import {
   insertBattle,
@@ -9,24 +10,39 @@ import {
   listScheduledBattles,
   insertBattleParticipant,
   findBattleParticipant,
+  listBattleParticipantsByBattle,
   updateBattleParticipantById,
+  insertBattleInvite,
+  findBattleInviteByToken,
+  listBattleInvitesByBattle,
+  updateBattleInviteById,
   type BattleStatus,
   type DbBattleRow,
   type UpdateBattlePayload,
   type DbBattleParticipantRow,
   type BattleParticipantRole,
   type BattleParticipantStatus,
+  type DbBattleInviteRow,
 } from '@rc01/db';
 import { logger } from '../utils/logger.js';
 
 export type BattleStartMode = 'manual' | 'scheduled';
+
+export type BattleVisibilityMode = 'public' | 'invite-only' | 'password';
+
+export type BattleConfiguration = {
+  allowSpectators: boolean;
+  maxContestants: number;
+  visibility: BattleVisibilityMode;
+  passwordRequired: boolean;
+} & Record<string, unknown>;
 
 export type BattleRecord = {
   id: string;
   name: string;
   shortDescription: string | null;
   status: BattleStatus;
-  configuration: Record<string, unknown>;
+  configuration: BattleConfiguration;
   autoStart: boolean;
   scheduledStartAt: string | null;
   startedAt: string | null;
@@ -43,6 +59,17 @@ export type BattleParticipantRecord = {
   permissions: BattlePermission[];
   invitedAt: string;
   joinedAt: string | null;
+  leftAt: string | null;
+  isContestant: boolean;
+};
+
+export type BattleInviteRecord = {
+  id: string;
+  battleId: string;
+  token: string;
+  createdByUserId: string;
+  createdAt: string;
+  revokedAt: string | null;
 };
 
 export type BattlePermission =
@@ -58,7 +85,13 @@ export type BattlePermission =
 
 type BattleEventMap = {
   'battle.lobby-opened': [BattleRecord];
+  'battle.status-changed': [{ battleId: string; status: BattleStatus }];
   'battle.participant-joined': [{ battleId: string; participant: BattleParticipantRecord }];
+  'battle.participant-left': [{ battleId: string; participant: BattleParticipantRecord }];
+  'battle.participant-updated': [{ battleId: string; participant: BattleParticipantRecord }];
+  'battle.contestants-updated': [{ battleId: string; contestants: BattleParticipantRecord[] }];
+  'battle.invite-created': [{ battleId: string; invite: BattleInviteRecord }];
+  'battle.invite-revoked': [{ battleId: string; inviteId: string }];
 };
 
 export const battleEvents = new EventEmitter<BattleEventMap>();
@@ -80,6 +113,8 @@ export type JoinBattleInput = {
   battleId: string;
   userId: string;
   role?: BattleParticipantRole;
+  password?: string;
+  inviteToken?: string;
 };
 
 export type JoinBattleResult = {
@@ -87,12 +122,50 @@ export type JoinBattleResult = {
   wasCreated: boolean;
 };
 
+export type UpdateParticipantRoleInput = {
+  battleId: string;
+  actingUserId: string;
+  targetUserId: string;
+  role: Exclude<BattleParticipantRole, 'owner'>;
+};
+
+export type UpdateBattleContestantsInput = {
+  battleId: string;
+  actingUserId: string;
+  contestantUserIds: string[];
+};
+
+export type CreateBattleInviteInput = {
+  battleId: string;
+  userId: string;
+};
+
+export type RevokeBattleInviteInput = {
+  battleId: string;
+  userId: string;
+  inviteId: string;
+};
+
 const CONFIGURABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled'];
-const DEFAULT_PARTICIPANT_ROLE: BattleParticipantRole = 'player';
-const PLAYER_JOINABLE_STATUSES: BattleStatus[] = ['lobby', 'active'];
+const DEFAULT_PARTICIPANT_ROLE: BattleParticipantRole = 'user';
+const USER_JOINABLE_STATUSES: BattleStatus[] = ['lobby', 'active'];
 const MANAGEMENT_JOINABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled', 'lobby', 'active'];
 const ACCEPTED_PARTICIPANT_STATUS: BattleParticipantStatus = 'accepted';
 const PENDING_PARTICIPANT_STATUS: BattleParticipantStatus = 'pending';
+const LEFT_PARTICIPANT_STATUS: BattleParticipantStatus = 'left';
+
+type PersistedBattleConfiguration = {
+  allowSpectators: boolean;
+  maxContestants: number;
+  visibility: BattleVisibilityMode;
+  passwordHash: string | null;
+  extras: Record<string, unknown>;
+};
+
+const MAX_CONTESTANTS_LIMIT = 50;
+const MIN_CONTESTANTS_LIMIT = 1;
+const DEFAULT_MAX_CONTESTANTS = 2;
+const BCRYPT_ROUNDS = 10;
 
 const ROLE_PERMISSIONS = {
   owner: [
@@ -125,7 +198,7 @@ const ROLE_PERMISSIONS = {
     'battle.submitSolution',
     'battle.viewSubmissions',
   ],
-  player: ['battle.view', 'battle.play', 'battle.submitSolution', 'battle.viewSubmissions'],
+  user: ['battle.view', 'battle.play', 'battle.submitSolution', 'battle.viewSubmissions'],
 } as const satisfies Record<BattleParticipantRole, readonly BattlePermission[]>;
 
 export const battleRoleCapabilities: Readonly<Record<BattleParticipantRole, readonly BattlePermission[]>> = ROLE_PERMISSIONS;
@@ -148,21 +221,209 @@ const canRoleJoinBattle = (status: BattleStatus, role: BattleParticipantRole): b
     return MANAGEMENT_JOINABLE_STATUSES.includes(status);
   }
 
-  return PLAYER_JOINABLE_STATUSES.includes(status);
+  return USER_JOINABLE_STATUSES.includes(status);
 };
 
-const toBattleRecord = (row: DbBattleRow): BattleRecord => ({
-  id: row.id,
-  name: row.name,
-  shortDescription: row.short_description,
-  status: row.status,
-  configuration: row.configuration ?? {},
-  autoStart: row.auto_start,
-  scheduledStartAt: row.scheduled_start_at ? row.scheduled_start_at.toISOString() : null,
-  startedAt: row.started_at ? row.started_at.toISOString() : null,
-  createdAt: row.created_at.toISOString(),
-  updatedAt: row.updated_at.toISOString(),
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
+const clampContestantCount = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  const rounded = Math.floor(parsed);
+  return Math.min(MAX_CONTESTANTS_LIMIT, Math.max(MIN_CONTESTANTS_LIMIT, rounded));
+};
+
+const parseVisibilityMode = (value: unknown, fallback: BattleVisibilityMode): BattleVisibilityMode => {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/_/g, '-');
+  if (normalized === 'invite-only' || normalized === 'inviteonly') {
+    return 'invite-only';
+  }
+  if (normalized === 'password') {
+    return 'password';
+  }
+  if (normalized === 'public') {
+    return 'public';
+  }
+
+  return fallback;
+};
+
+const parseBooleanFlag = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return fallback;
+};
+
+const DEFAULT_PERSISTED_CONFIGURATION: PersistedBattleConfiguration = {
+  allowSpectators: true,
+  maxContestants: DEFAULT_MAX_CONTESTANTS,
+  visibility: 'public',
+  passwordHash: null,
+  extras: {},
+};
+
+const sanitizePersistedConfiguration = (value: unknown): PersistedBattleConfiguration => {
+  const record = isRecord(value) ? { ...value } : {};
+
+  const allowSpectators = parseBooleanFlag(record.allowSpectators, DEFAULT_PERSISTED_CONFIGURATION.allowSpectators);
+  const maxContestants = clampContestantCount(record.maxContestants, DEFAULT_PERSISTED_CONFIGURATION.maxContestants);
+  const visibility = parseVisibilityMode(record.visibility, DEFAULT_PERSISTED_CONFIGURATION.visibility);
+  const passwordHash = typeof record.passwordHash === 'string' && record.passwordHash.trim()
+    ? record.passwordHash
+    : null;
+
+  delete record.allowSpectators;
+  delete record.maxContestants;
+  delete record.visibility;
+  delete record.password;
+  delete record.passwordHash;
+
+  return {
+    allowSpectators,
+    maxContestants,
+    visibility,
+    passwordHash,
+    extras: record,
+  };
+};
+
+const buildPersistedConfigurationObject = (config: PersistedBattleConfiguration): Record<string, unknown> => {
+  const persisted: Record<string, unknown> = {
+    ...config.extras,
+    allowSpectators: config.allowSpectators,
+    maxContestants: config.maxContestants,
+    visibility: config.visibility,
+  };
+
+  if (config.passwordHash) {
+    persisted.passwordHash = config.passwordHash;
+  }
+
+  return persisted;
+};
+
+const toPublicConfiguration = (config: PersistedBattleConfiguration): BattleConfiguration => ({
+  ...config.extras,
+  allowSpectators: config.allowSpectators,
+  maxContestants: config.maxContestants,
+  visibility: config.visibility,
+  passwordRequired: config.visibility === 'password' && Boolean(config.passwordHash),
 });
+
+const prepareConfigurationForPersist = async (
+  input: Record<string, unknown> | undefined,
+  existing?: PersistedBattleConfiguration,
+): Promise<PersistedBattleConfiguration> => {
+  const base = existing ?? DEFAULT_PERSISTED_CONFIGURATION;
+  const incoming = isRecord(input) ? input : {};
+
+  const allowSpectators = parseBooleanFlag(incoming.allowSpectators, base.allowSpectators);
+  const maxContestants = clampContestantCount(incoming.maxContestants, base.maxContestants);
+  const visibility = parseVisibilityMode(incoming.visibility, base.visibility);
+
+  let passwordHash = base.passwordHash;
+
+  if (visibility !== 'password') {
+    passwordHash = null;
+  } else if (Object.prototype.hasOwnProperty.call(incoming, 'password')) {
+    const rawPassword = typeof incoming.password === 'string' ? incoming.password.trim() : '';
+    if (!rawPassword) {
+      throw createHttpError(400, 'Password is required when visibility is set to "password"');
+    }
+    passwordHash = await bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
+  } else if (!passwordHash) {
+    throw createHttpError(400, 'Password is required when visibility is set to "password"');
+  }
+
+  const extras = { ...base.extras };
+  for (const [key, value] of Object.entries(incoming)) {
+    if (['allowSpectators', 'maxContestants', 'visibility', 'password'].includes(key)) {
+      continue;
+    }
+    extras[key] = value;
+  }
+
+  return {
+    allowSpectators,
+    maxContestants,
+    visibility,
+    passwordHash,
+    extras,
+  };
+};
+
+const getParticipantOrThrow = async (
+  battleId: string,
+  userId: string,
+  errorStatus: number,
+  errorMessage: string,
+): Promise<DbBattleParticipantRow> => {
+  const participant = await findBattleParticipant(battleId, userId);
+  if (!participant) {
+    throw createHttpError(errorStatus, errorMessage);
+  }
+
+  return participant;
+};
+
+const requireAcceptedParticipant = async (
+  battleId: string,
+  userId: string,
+  errorStatus = 403,
+  errorMessage = 'You are not participating in this battle',
+): Promise<DbBattleParticipantRow> => {
+  const participant = await getParticipantOrThrow(battleId, userId, errorStatus, errorMessage);
+
+  if (participant.status !== ACCEPTED_PARTICIPANT_STATUS) {
+    throw createHttpError(errorStatus, errorMessage);
+  }
+
+  return participant;
+};
+
+const assertBattleNotLocked = (battle: DbBattleRow): void => {
+  if (battle.status === 'active' || battle.status === 'completed' || battle.status === 'cancelled') {
+    throw createHttpError(409, 'Battle can no longer be modified');
+  }
+};
+
+const toBattleRecord = (row: DbBattleRow): BattleRecord => {
+  const persistedConfig = sanitizePersistedConfiguration(row.configuration);
+
+  return {
+    id: row.id,
+    name: row.name,
+    shortDescription: row.short_description,
+    status: row.status,
+    configuration: toPublicConfiguration(persistedConfig),
+    autoStart: row.auto_start,
+    scheduledStartAt: row.scheduled_start_at ? row.scheduled_start_at.toISOString() : null,
+    startedAt: row.started_at ? row.started_at.toISOString() : null,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  };
+};
 
 const toBattleParticipantRecord = (row: DbBattleParticipantRow): BattleParticipantRecord => ({
   id: row.id,
@@ -173,6 +434,17 @@ const toBattleParticipantRecord = (row: DbBattleParticipantRow): BattleParticipa
   permissions: getPermissionsForRole(row.role),
   invitedAt: row.created_at.toISOString(),
   joinedAt: row.accepted_at ? row.accepted_at.toISOString() : null,
+  leftAt: row.left_at ? row.left_at.toISOString() : null,
+  isContestant: row.is_contestant,
+});
+
+const toBattleInviteRecord = (row: DbBattleInviteRow): BattleInviteRecord => ({
+  id: row.id,
+  battleId: row.battle_id,
+  token: row.token,
+  createdByUserId: row.created_by_user_id,
+  createdAt: row.created_at.toISOString(),
+  revokedAt: row.revoked_at ? row.revoked_at.toISOString() : null,
 });
 
 class BattleScheduler {
@@ -344,10 +616,15 @@ export const getBattleById = async (id: string): Promise<BattleRecord> => {
   return toBattleRecord(row);
 };
 
+export const listBattleParticipants = async (battleId: string): Promise<BattleParticipantRecord[]> => {
+  const participants = await listBattleParticipantsByBattle(battleId);
+  return participants.map(toBattleParticipantRecord);
+};
+
 export const createBattle = async (input: CreateBattleInput): Promise<BattleRecord> => {
   const name = sanitizeName(input.name);
   const shortDescription = normalizeShortDescription(input.shortDescription);
-  const configuration = input.configuration ?? {};
+  const configurationPlan = await prepareConfigurationForPersist(input.configuration, DEFAULT_PERSISTED_CONFIGURATION);
 
   const plan = determineStartPlan(input.startMode, input.scheduledStartAt ?? null);
   const battleId = uuid();
@@ -357,7 +634,7 @@ export const createBattle = async (input: CreateBattleInput): Promise<BattleReco
     name,
     shortDescription: shortDescription ?? null,
     status: plan.status,
-    configuration,
+    configuration: buildPersistedConfigurationObject(configurationPlan),
     autoStart: plan.autoStart,
     scheduledStartAt: plan.scheduledStartAt,
     startedAt: plan.startedAt,
@@ -370,6 +647,7 @@ export const createBattle = async (input: CreateBattleInput): Promise<BattleReco
     role: 'owner',
     status: ACCEPTED_PARTICIPANT_STATUS,
     acceptedAt: new Date(),
+    isContestant: false,
   });
 
   battleEvents.emit('battle.participant-joined', {
@@ -400,7 +678,7 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
 
   const startMode = input.startMode ?? (existing.auto_start ? 'scheduled' : 'manual');
   const shortDescription = normalizeShortDescription(input.shortDescription ?? undefined);
-  const configuration = input.configuration ?? existing.configuration ?? {};
+  const existingConfig = sanitizePersistedConfiguration(existing.configuration);
   const plan = determineUpdatePlan(
     existing,
     startMode,
@@ -424,7 +702,24 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
   }
 
   if (input.configuration !== undefined) {
-    updates.configuration = configuration;
+    const configurationPlan = await prepareConfigurationForPersist(input.configuration, existingConfig);
+
+    if (configurationPlan.maxContestants < existingConfig.maxContestants) {
+      const participants = await listBattleParticipantsByBattle(id);
+      const activeContestants = participants.filter(
+        (participant) =>
+          participant.status === ACCEPTED_PARTICIPANT_STATUS && participant.is_contestant,
+      ).length;
+
+      if (configurationPlan.maxContestants < activeContestants) {
+        throw createHttpError(
+          409,
+          `Cannot reduce max contestants below current contestant count (${activeContestants}).`,
+        );
+      }
+    }
+
+    updates.configuration = buildPersistedConfigurationObject(configurationPlan);
   }
 
   const updated = await updateBattleById(id, updates);
@@ -441,6 +736,10 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
 
   const record = toBattleRecord(updated);
 
+  if (existing.status !== record.status) {
+    battleEvents.emit('battle.status-changed', { battleId: id, status: record.status });
+  }
+
   if (record.status === 'lobby') {
     battleEvents.emit('battle.lobby-opened', record);
   }
@@ -454,13 +753,27 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     throw createHttpError(404, 'Battle not found');
   }
 
+  const configuration = sanitizePersistedConfiguration(battle.configuration);
   const existingParticipant = await findBattleParticipant(input.battleId, input.userId);
+  const trimmedToken = input.inviteToken?.trim();
+  let invite: DbBattleInviteRow | null = null;
+
+  if (trimmedToken) {
+    invite = await findBattleInviteByToken(trimmedToken);
+    if (!invite || invite.battle_id !== input.battleId || invite.revoked_at) {
+      throw createHttpError(403, 'Invalid or expired battle invitation token');
+    }
+  }
 
   if (existingParticipant) {
-    if (existingParticipant.status === PENDING_PARTICIPANT_STATUS) {
+    if (
+      existingParticipant.status === PENDING_PARTICIPANT_STATUS ||
+      existingParticipant.status === LEFT_PARTICIPANT_STATUS
+    ) {
       const accepted = await updateBattleParticipantById(existingParticipant.id, {
         status: ACCEPTED_PARTICIPANT_STATUS,
         acceptedAt: new Date(),
+        leftAt: null,
       });
 
       const participant = toBattleParticipantRecord(accepted);
@@ -477,12 +790,36 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
 
   const normalizedRole = normalizeParticipantRole(input.role);
 
-  if (normalizedRole !== 'player') {
+  if (normalizedRole !== 'user') {
     throw createHttpError(403, `Only invited users can join with the "${normalizedRole}" role`);
   }
 
   if (!canRoleJoinBattle(battle.status, normalizedRole)) {
     throw createHttpError(409, `Battle cannot be joined while in status "${battle.status}"`);
+  }
+
+  if (battle.status === 'active' && !configuration.allowSpectators) {
+    throw createHttpError(403, 'Spectators are not allowed to join this battle');
+  }
+
+  const hasInviteAccess = Boolean(invite);
+
+  if (!hasInviteAccess) {
+    if (configuration.visibility === 'invite-only') {
+      throw createHttpError(403, 'Battle can only be joined via invitation');
+    }
+
+    if (configuration.visibility === 'password') {
+      const providedPassword = (input.password ?? '').trim();
+      if (!providedPassword || !configuration.passwordHash) {
+        throw createHttpError(403, 'A password is required to join this battle');
+      }
+
+      const isMatch = await bcrypt.compare(providedPassword, configuration.passwordHash);
+      if (!isMatch) {
+        throw createHttpError(403, 'Invalid password for this battle');
+      }
+    }
   }
 
   const participantRow = await insertBattleParticipant({
@@ -492,12 +829,247 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     role: normalizedRole,
     status: ACCEPTED_PARTICIPANT_STATUS,
     acceptedAt: new Date(),
+    isContestant: false,
+    leftAt: null,
   });
 
   const participant = toBattleParticipantRecord(participantRow);
   battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
 
   return { participant, wasCreated: true };
+};
+
+export const leaveBattle = async (battleId: string, userId: string): Promise<BattleParticipantRecord> => {
+  const participant = await findBattleParticipant(battleId, userId);
+  if (!participant) {
+    throw createHttpError(404, 'Participant not found');
+  }
+
+  if (participant.status !== ACCEPTED_PARTICIPANT_STATUS) {
+    throw createHttpError(409, 'Participant is not currently joined to this battle');
+  }
+
+  const updated = await updateBattleParticipantById(participant.id, {
+    status: LEFT_PARTICIPANT_STATUS,
+    leftAt: new Date(),
+    isContestant: false,
+  });
+
+  const record = toBattleParticipantRecord(updated);
+  battleEvents.emit('battle.participant-left', { battleId, participant: record });
+
+  return record;
+};
+
+export const updateBattleParticipantRole = async (
+  input: UpdateParticipantRoleInput,
+): Promise<BattleParticipantRecord> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  assertBattleNotLocked(battle);
+
+  const actingParticipant = await requireAcceptedParticipant(
+    input.battleId,
+    input.actingUserId,
+    403,
+    'You must join the battle before managing participants',
+  );
+
+  if (!canAssignRoles(actingParticipant.role)) {
+    throw createHttpError(403, 'You do not have permission to change participant roles');
+  }
+
+  if (input.role === 'owner') {
+    throw createHttpError(400, 'Owner role cannot be reassigned');
+  }
+
+  const target = await getParticipantOrThrow(
+    input.battleId,
+    input.targetUserId,
+    404,
+    'Participant not found',
+  );
+
+  if (target.role === 'owner') {
+    throw createHttpError(403, 'Owner role cannot be changed');
+  }
+
+  if (target.role === input.role) {
+    return toBattleParticipantRecord(target);
+  }
+
+  const updated = await updateBattleParticipantById(target.id, { role: input.role });
+  const record = toBattleParticipantRecord(updated);
+  battleEvents.emit('battle.participant-updated', { battleId: input.battleId, participant: record });
+
+  return record;
+};
+
+export const updateBattleContestants = async (
+  input: UpdateBattleContestantsInput,
+): Promise<BattleParticipantRecord[]> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  assertBattleNotLocked(battle);
+
+  const actingParticipant = await requireAcceptedParticipant(
+    input.battleId,
+    input.actingUserId,
+    403,
+    'You must join the battle before managing contestants',
+  );
+
+  if (!canAssignRoles(actingParticipant.role)) {
+    throw createHttpError(403, 'You do not have permission to choose contestants');
+  }
+
+  const configuration = sanitizePersistedConfiguration(battle.configuration);
+  const desiredContestants = new Set(input.contestantUserIds.map((userId) => userId.trim()).filter(Boolean));
+
+  if (desiredContestants.size > configuration.maxContestants) {
+    throw createHttpError(
+      409,
+      `Cannot select more than ${configuration.maxContestants} contestants for this battle`,
+    );
+  }
+
+  const participants = await listBattleParticipantsByBattle(input.battleId);
+
+  const acceptedParticipants = participants.filter(
+    (participant) => participant.status === ACCEPTED_PARTICIPANT_STATUS,
+  );
+
+  for (const userId of desiredContestants) {
+    const participant = acceptedParticipants.find((item) => item.user_id === userId);
+    if (!participant) {
+      throw createHttpError(404, `Participant ${userId} is not part of this battle`);
+    }
+  }
+
+  for (const participant of acceptedParticipants) {
+    const shouldBeContestant = desiredContestants.has(participant.user_id);
+
+    if (participant.is_contestant === shouldBeContestant) {
+      continue;
+    }
+
+    const updated = await updateBattleParticipantById(participant.id, {
+      isContestant: shouldBeContestant,
+    });
+
+    const record = toBattleParticipantRecord(updated);
+    battleEvents.emit('battle.participant-updated', { battleId: input.battleId, participant: record });
+  }
+
+  const refreshed = await listBattleParticipantsByBattle(input.battleId);
+  const contestants = refreshed
+    .filter((participant) => participant.is_contestant && participant.status === ACCEPTED_PARTICIPANT_STATUS)
+    .map(toBattleParticipantRecord);
+
+  battleEvents.emit('battle.contestants-updated', { battleId: input.battleId, contestants });
+
+  return contestants;
+};
+
+export const createBattleInvite = async (
+  input: CreateBattleInviteInput,
+): Promise<BattleInviteRecord> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  const participant = await requireAcceptedParticipant(
+    input.battleId,
+    input.userId,
+    403,
+    'You must join the battle before inviting others',
+  );
+
+  const invite = await insertBattleInvite({
+    id: uuid(),
+    battleId: input.battleId,
+    token: uuid().replace(/-/g, ''),
+    createdByUserId: participant.user_id,
+    revokedAt: null,
+  });
+
+  const record = toBattleInviteRecord(invite);
+  battleEvents.emit('battle.invite-created', { battleId: input.battleId, invite: record });
+
+  return record;
+};
+
+export const listBattleInvites = async (
+  battleId: string,
+  userId: string,
+): Promise<BattleInviteRecord[]> => {
+  const battle = await findBattleById(battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  const participant = await requireAcceptedParticipant(
+    battleId,
+    userId,
+    403,
+    'You must join the battle before viewing invitations',
+  );
+
+  const invites = await listBattleInvitesByBattle(battleId);
+
+  if (canAssignRoles(participant.role)) {
+    return invites.map(toBattleInviteRecord);
+  }
+
+  return invites
+    .filter((invite) => invite.created_by_user_id === participant.user_id)
+    .map(toBattleInviteRecord);
+};
+
+export const revokeBattleInvite = async (
+  input: RevokeBattleInviteInput,
+): Promise<BattleInviteRecord> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  const participant = await requireAcceptedParticipant(
+    input.battleId,
+    input.userId,
+    403,
+    'You must join the battle before managing invitations',
+  );
+
+  const invites = await listBattleInvitesByBattle(input.battleId);
+  const invite = invites.find((item) => item.id === input.inviteId);
+
+  if (!invite) {
+    throw createHttpError(404, 'Invite not found');
+  }
+
+  const canManageInvite = invite.created_by_user_id === participant.user_id || canAssignRoles(participant.role);
+
+  if (!canManageInvite) {
+    throw createHttpError(403, 'You do not have permission to revoke this invite');
+  }
+
+  if (invite.revoked_at) {
+    return toBattleInviteRecord(invite);
+  }
+
+  const updated = await updateBattleInviteById(invite.id, { revokedAt: new Date() });
+  const record = toBattleInviteRecord(updated);
+  battleEvents.emit('battle.invite-revoked', { battleId: input.battleId, inviteId: record.id });
+
+  return record;
 };
 
 export type InviteBattleParticipantInput = {
@@ -581,7 +1153,9 @@ export const startBattle = async (id: string): Promise<BattleRecord> => {
     throw createHttpError(404, 'Battle not found');
   }
 
-  return toBattleRecord(updated);
+  const record = toBattleRecord(updated);
+  battleEvents.emit('battle.status-changed', { battleId: id, status: record.status });
+  return record;
 };
 
 export const isConfigurableStatus = (status: BattleStatus): boolean => CONFIGURABLE_STATUSES.includes(status);

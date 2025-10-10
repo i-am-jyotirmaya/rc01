@@ -271,4 +271,64 @@ describe('battleService lobby state', () => {
     const revoked = await revokeBattleInvite({ battleId: created.id, userId: owner.id, inviteId: invite.id });
     expect(revoked.revokedAt).not.toBeNull();
   });
+
+  it('restricts invite creation to management roles', async () => {
+    const owner = await createUser({ username: 'invite-owner' });
+    const player = await createUser({ username: 'invite-player' });
+
+    const created = await createBattle({
+      name: 'Invite Restrictions',
+      startMode: 'manual',
+      configuration: {},
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+    await joinBattle({ battleId: created.id, userId: owner.id });
+
+    await updateBattle(created.id, { status: 'lobby' });
+    await joinBattle({ battleId: created.id, userId: player.id });
+
+    await expect(createBattleInvite({ battleId: created.id, userId: player.id })).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it('prevents re-inviting the owner with a different role', async () => {
+    const owner = await createUser({ username: 'owner-guard' });
+    const admin = await createUser({ username: 'owner-guard-admin' });
+
+    const created = await createBattle({
+      name: 'Owner Guard Battle',
+      startMode: 'manual',
+      configuration: {},
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+
+    await joinBattle({ battleId: created.id, userId: owner.id });
+
+    await inviteBattleParticipant({
+      battleId: created.id,
+      inviterUserId: owner.id,
+      inviteeUserId: admin.id,
+      role: 'admin',
+    });
+
+    await joinBattle({ battleId: created.id, userId: admin.id });
+
+    await expect(
+      inviteBattleParticipant({
+        battleId: created.id,
+        inviterUserId: admin.id,
+        inviteeUserId: owner.id,
+        role: 'admin',
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+
+    const ownerPresence = await joinBattle({ battleId: created.id, userId: owner.id });
+    expect(ownerPresence.participant.role).toBe('owner');
+    expect(ownerPresence.participant.status).toBe('accepted');
+  });
 });

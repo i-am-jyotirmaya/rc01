@@ -992,6 +992,10 @@ export const createBattleInvite = async (
     'You must join the battle before inviting others',
   );
 
+  if (!canAssignRoles(participant.role)) {
+    throw createHttpError(403, 'You do not have permission to invite participants to this battle');
+  }
+
   const invite = await insertBattleInvite({
     id: uuid(),
     battleId: input.battleId,
@@ -1099,6 +1103,10 @@ export const inviteBattleParticipant = async (
   const existingInvitee = await findBattleParticipant(input.battleId, input.inviteeUserId);
 
   if (existingInvitee) {
+    if (existingInvitee.role === 'owner') {
+      throw createHttpError(403, 'Owner role cannot be reassigned through invitations');
+    }
+
     const updates: { role?: BattleParticipantRole; status?: BattleParticipantStatus; acceptedAt?: Date | null } = {};
 
     if (existingInvitee.role !== input.role) {

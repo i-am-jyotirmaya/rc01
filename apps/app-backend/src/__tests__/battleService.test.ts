@@ -331,4 +331,53 @@ describe('battleService lobby state', () => {
     expect(ownerPresence.participant.role).toBe('owner');
     expect(ownerPresence.participant.status).toBe('accepted');
   });
+
+  it('disallows left participants from rejoining spectator-locked battles without invite access', async () => {
+    const owner = await createUser({ username: 'spectator-lock-owner' });
+    const player = await createUser({ username: 'spectator-lock-player' });
+
+    const created = await createBattle({
+      name: 'Spectator Locked Battle',
+      startMode: 'manual',
+      configuration: { allowSpectators: false },
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+    await updateBattle(created.id, { status: 'lobby' });
+
+    await joinBattle({ battleId: created.id, userId: owner.id });
+    await joinBattle({ battleId: created.id, userId: player.id });
+
+    await startBattle(created.id);
+    await leaveBattle(created.id, player.id);
+
+    await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('requires returning participants to revalidate password-protected battles', async () => {
+    const owner = await createUser({ username: 'password-owner' });
+    const player = await createUser({ username: 'password-player' });
+
+    const created = await createBattle({
+      name: 'Password Battle',
+      startMode: 'manual',
+      configuration: { visibility: 'password', password: 'join-pass' },
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+    await updateBattle(created.id, { status: 'lobby' });
+
+    await joinBattle({ battleId: created.id, userId: owner.id });
+    await joinBattle({ battleId: created.id, userId: player.id, password: 'join-pass' });
+
+    await leaveBattle(created.id, player.id);
+
+    await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 403 });
+
+    const rejoins = await joinBattle({ battleId: created.id, userId: player.id, password: 'join-pass' });
+    expect(rejoins.wasCreated).toBe(false);
+    expect(rejoins.participant.status).toBe('accepted');
+  });
 });

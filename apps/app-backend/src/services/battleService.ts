@@ -755,6 +755,19 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
 
   const configuration = sanitizePersistedConfiguration(battle.configuration);
   const existingParticipant = await findBattleParticipant(input.battleId, input.userId);
+  if (existingParticipant?.status === ACCEPTED_PARTICIPANT_STATUS) {
+    return {
+      participant: toBattleParticipantRecord(existingParticipant),
+      wasCreated: false,
+    };
+  }
+
+  const participantRole = existingParticipant?.role ?? normalizeParticipantRole(input.role);
+
+  if (!existingParticipant && participantRole !== 'user') {
+    throw createHttpError(403, `Only invited users can join with the "${participantRole}" role`);
+  }
+
   const trimmedToken = input.inviteToken?.trim();
   let invite: DbBattleInviteRow | null = null;
 
@@ -765,44 +778,23 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     }
   }
 
-  if (existingParticipant) {
-    if (
-      existingParticipant.status === PENDING_PARTICIPANT_STATUS ||
-      existingParticipant.status === LEFT_PARTICIPANT_STATUS
-    ) {
-      const accepted = await updateBattleParticipantById(existingParticipant.id, {
-        status: ACCEPTED_PARTICIPANT_STATUS,
-        acceptedAt: new Date(),
-        leftAt: null,
-      });
-
-      const participant = toBattleParticipantRecord(accepted);
-      battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
-
-      return { participant, wasCreated: false };
-    }
-
-    return {
-      participant: toBattleParticipantRecord(existingParticipant),
-      wasCreated: false,
-    };
-  }
-
-  const normalizedRole = normalizeParticipantRole(input.role);
-
-  if (normalizedRole !== 'user') {
-    throw createHttpError(403, `Only invited users can join with the "${normalizedRole}" role`);
-  }
-
-  if (!canRoleJoinBattle(battle.status, normalizedRole)) {
+  if (!canRoleJoinBattle(battle.status, participantRole)) {
     throw createHttpError(409, `Battle cannot be joined while in status "${battle.status}"`);
   }
 
-  if (battle.status === 'active' && !configuration.allowSpectators) {
+  const isUserRole = participantRole === 'user';
+
+  if (isUserRole && battle.status === 'active' && !configuration.allowSpectators) {
     throw createHttpError(403, 'Spectators are not allowed to join this battle');
   }
 
-  const hasInviteAccess = Boolean(invite);
+  let hasInviteAccess = Boolean(invite);
+
+  if (existingParticipant?.status === PENDING_PARTICIPANT_STATUS) {
+    hasInviteAccess = true;
+  } else if (existingParticipant && existingParticipant.role !== 'user') {
+    hasInviteAccess = true;
+  }
 
   if (!hasInviteAccess) {
     if (configuration.visibility === 'invite-only') {
@@ -822,11 +814,28 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     }
   }
 
+  if (existingParticipant) {
+    const accepted = await updateBattleParticipantById(existingParticipant.id, {
+      status: ACCEPTED_PARTICIPANT_STATUS,
+      acceptedAt: new Date(),
+      leftAt: null,
+    });
+
+    const participant = toBattleParticipantRecord(accepted);
+    battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
+
+    return { participant, wasCreated: false };
+  }
+
+  if (participantRole !== 'user') {
+    throw createHttpError(403, `Only invited users can join with the "${participantRole}" role`);
+  }
+
   const participantRow = await insertBattleParticipant({
     id: uuid(),
     battleId: input.battleId,
     userId: input.userId,
-    role: normalizedRole,
+    role: participantRole,
     status: ACCEPTED_PARTICIPANT_STATUS,
     acceptedAt: new Date(),
     isContestant: false,

@@ -3,8 +3,14 @@ import createHttpError from 'http-errors';
 import multer from 'multer';
 import { z } from 'zod';
 
-import { createProblemSchema, type CreateProblemInput, ProblemStore } from '../services/problemStore.js';
-import { sanitizeSlug } from '../utils/files.js';
+import {
+  type CreateProblemInput,
+  FileManager,
+  ProblemNotFoundError,
+  ProblemTemplateValidationError,
+  problemContentSchema,
+  sanitizeSlug,
+} from '@rc01/file-manager';
 
 const slugParamSchema = z.object({
   slug: z
@@ -34,11 +40,7 @@ const extractContentFromRequest = (req: Request): string | undefined => {
   return undefined;
 };
 
-const isTemplateValidationError = (error: unknown): error is Error => {
-  return error instanceof Error && /template/i.test(error.message);
-};
-
-export const createProblemRouter = (store: ProblemStore, options: ProblemRouterOptions): Router => {
+export const createProblemRouter = (fileManager: FileManager, options: ProblemRouterOptions): Router => {
   const router = Router();
   const maxSizeBytes = Math.max(1, options.maxProblemSizeMb) * 1024 * 1024;
   const upload = multer({
@@ -48,7 +50,7 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
 
   router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const problems = await store.list();
+      const problems = await fileManager.listProblems();
       res.json({ problems });
     } catch (error) {
       next(error);
@@ -64,15 +66,15 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
     ): Promise<void> => {
       try {
         const { slug } = slugParamSchema.parse(req.params);
-        const problem = await store.read(slug);
+        const problem = await fileManager.getProblem(slug);
         res.json(problem);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (error instanceof ProblemNotFoundError) {
           next(createHttpError(404, 'Problem not found'));
           return;
         }
 
-        if (isTemplateValidationError(error)) {
+        if (error instanceof ProblemTemplateValidationError) {
           next(createHttpError(422, error.message));
           return;
         }
@@ -96,8 +98,8 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
           throw createHttpError(400, 'Problem content is required');
         }
 
-        const parsedBody = createProblemSchema.parse({ content: rawContent });
-        const problem = await store.save(parsedBody);
+        const parsedBody = problemContentSchema.parse({ content: rawContent });
+        const problem = await fileManager.saveProblem(parsedBody);
         res.status(201).json(problem);
       } catch (error) {
         if (error instanceof multer.MulterError) {
@@ -110,7 +112,7 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
           return;
         }
 
-        if (isTemplateValidationError(error)) {
+        if (error instanceof ProblemTemplateValidationError) {
           next(createHttpError(422, error.message));
           return;
         }
@@ -129,10 +131,10 @@ export const createProblemRouter = (store: ProblemStore, options: ProblemRouterO
     ): Promise<void> => {
       try {
         const { slug } = slugParamSchema.parse(req.params);
-        await store.delete(slug);
+        await fileManager.deleteProblem(slug);
         res.status(204).send();
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (error instanceof ProblemNotFoundError) {
           next(createHttpError(404, 'Problem not found'));
           return;
         }

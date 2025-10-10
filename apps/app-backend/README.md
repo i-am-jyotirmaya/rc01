@@ -35,6 +35,9 @@ Key variables:
 - `STORAGE_DIR`: Absolute path where uploads will be written when running inside Docker (defaults to `/app/storage`).
 - `MAX_UPLOAD_SIZE_MB`: Maximum allowed upload size for profile photos.
 - `IMAGE_MAX_WIDTH`: Maximum width (in pixels) for resized profile photos.
+- `FILE_MANAGER_MODE`: Set to `service` (default) to call the HTTP service or `package` to embed the shared file manager directly.
+- `FILE_MANAGER_STORAGE_ROOT`: Where problem Markdown files and the SQLite metadata database live when running in `package` mode (defaults to `<STORAGE_DIR>/problems`).
+- `FILE_MANAGER_DATABASE_FILE`: Optional override for the SQLite database path when in `package` mode.
 
 ### Commands
 
@@ -102,6 +105,8 @@ The backend ships with a Compose file that starts:
 - `@rc01/app-backend`: Node.js service running on port 4000.
 - `file-manager`: Dedicated Markdown storage service exposed on port 4100 and sharing the `problem_markdown_data` volume.
 - `postgres`: Postgres 15 database with a named volume for persistence.
+
+When `FILE_MANAGER_MODE=package` the backend talks to the shared `@rc01/file-manager` package directly and you can omit the `file-manager` container from your stack if desired.
 
 Available scripts:
 

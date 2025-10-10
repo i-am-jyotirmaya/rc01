@@ -14,6 +14,7 @@ const ADMIN_TOKEN = 'test-admin-token';
 const createTestServer = async (): Promise<Express & { cleanup: () => Promise<void> }> => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'file-manager-tests-'));
   process.env.PROBLEM_STORAGE_ROOT = tempDir;
+  process.env.FILE_MANAGER_DATABASE_FILE = path.join(tempDir, 'metadata.sqlite');
   process.env.FILE_MANAGER_ADMIN_TOKEN = ADMIN_TOKEN;
   process.env.NODE_ENV = 'test';
 
@@ -38,6 +39,7 @@ describe('Problem routes', () => {
   afterEach(async () => {
     await app.cleanup();
     delete process.env.PROBLEM_STORAGE_ROOT;
+    delete process.env.FILE_MANAGER_DATABASE_FILE;
     delete process.env.FILE_MANAGER_ADMIN_TOKEN;
     vi.resetModules();
   });

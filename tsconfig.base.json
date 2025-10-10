@@ -22,6 +22,12 @@
       "@rc01/api-client/*": [
         "packages/api-client/src/*"
       ],
+      "@rc01/file-manager": [
+        "packages/file-manager/src/index.ts"
+      ],
+      "@rc01/file-manager/*": [
+        "packages/file-manager/src/*"
+      ],
       "@rc01/problem-template": [
         "packages/problem-template/src/index.ts"
       ],

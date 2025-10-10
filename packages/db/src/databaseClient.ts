@@ -6,6 +6,7 @@ import type {
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from './types.js';
 
@@ -31,6 +32,7 @@ export interface BattleParticipantsRepository {
   find(battleId: string, userId: string): Promise<DbBattleParticipantRow | null>;
   findByRole(battleId: string, role: BattleParticipantRole): Promise<DbBattleParticipantRow | null>;
   listByBattle(battleId: string): Promise<DbBattleParticipantRow[]>;
+  updateById(id: string, payload: UpdateBattleParticipantPayload): Promise<DbBattleParticipantRow>;
 }
 
 export interface DatabaseClient {

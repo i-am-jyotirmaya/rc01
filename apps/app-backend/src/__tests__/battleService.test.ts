@@ -3,6 +3,7 @@ import { insertUser } from '@rc01/db';
 import {
   battleEvents,
   createBattle,
+  inviteBattleParticipant,
   joinBattle,
   startBattle,
   updateBattle,
@@ -12,7 +13,8 @@ import { setupTestDatabase, teardownTestDatabase } from './helpers/db.js';
 
 const createUser = async (overrides: Partial<{ username: string }> = {}) => {
   const id = randomUUID();
-  const username = overrides.username ?? `user-${id.slice(0, 8)}`;
+  const baseUsername = overrides.username ?? `user-${id.slice(0, 8)}`;
+  const username = overrides.username ? `${baseUsername}-${id.slice(0, 6)}` : baseUsername;
 
   await insertUser({
     id,
@@ -43,10 +45,13 @@ describe('battleService lobby state', () => {
       lobbyOpened.push(battle);
     });
 
+    const owner = await createUser({ username: 'lobby-owner' });
+
     const created = await createBattle({
       name: 'Lobby Battle',
       startMode: 'manual',
       configuration: { allowSpectators: true },
+      createdByUserId: owner.id,
     });
 
     const ready = await updateBattle(created.id, { status: 'ready' });
@@ -61,27 +66,45 @@ describe('battleService lobby state', () => {
     await expect(updateBattle(created.id, { name: 'New Name' })).rejects.toMatchObject({ status: 409 });
   });
 
-  it('enforces join guards for players while allowing host enrollment and emits join events', async () => {
-    const host = await createUser({ username: 'battle-host' });
+  it('enforces join guards for players while supporting administrative role invitations', async () => {
+    const owner = await createUser({ username: 'battle-owner' });
+    const admin = await createUser({ username: 'battle-admin' });
+    const otherAdmin = await createUser({ username: 'other-admin' });
     const player = await createUser({ username: 'battle-player' });
-    const otherHost = await createUser({ username: 'other-host' });
-
-    const created = await createBattle({
-      name: 'Join Battle',
-      startMode: 'manual',
-      configuration: {},
-    });
-
-    await updateBattle(created.id, { status: 'ready' });
 
     const joinEvents: { battleId: string }[] = [];
     battleEvents.on('battle.participant-joined', ({ battleId }) => {
       joinEvents.push({ battleId });
     });
 
-    const hostJoin = await joinBattle({ battleId: created.id, userId: host.id, role: 'host' });
-    expect(hostJoin.wasCreated).toBe(true);
-    expect(hostJoin.participant.role).toBe('host');
+    const created = await createBattle({
+      name: 'Join Battle',
+      startMode: 'manual',
+      configuration: {},
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+
+    const ownerPresence = await joinBattle({ battleId: created.id, userId: owner.id });
+    expect(ownerPresence.wasCreated).toBe(false);
+    expect(ownerPresence.participant.role).toBe('owner');
+    expect(ownerPresence.participant.status).toBe('accepted');
+
+    const pendingAdmin = await inviteBattleParticipant({
+      battleId: created.id,
+      inviterUserId: owner.id,
+      inviteeUserId: admin.id,
+      role: 'admin',
+    });
+    expect(pendingAdmin.status).toBe('pending');
+
+    const acceptedAdmin = await joinBattle({ battleId: created.id, userId: admin.id });
+    expect(acceptedAdmin.wasCreated).toBe(false);
+    expect(acceptedAdmin.participant.role).toBe('admin');
+    expect(acceptedAdmin.participant.status).toBe('accepted');
+
+    await expect(joinBattle({ battleId: created.id, userId: otherAdmin.id, role: 'admin' })).rejects.toMatchObject({ status: 403 });
 
     await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 409 });
 
@@ -90,19 +113,21 @@ describe('battleService lobby state', () => {
     const playerJoin = await joinBattle({ battleId: created.id, userId: player.id });
     expect(playerJoin.wasCreated).toBe(true);
     expect(playerJoin.participant.role).toBe('player');
+    expect(playerJoin.participant.status).toBe('accepted');
 
     const duplicateJoin = await joinBattle({ battleId: created.id, userId: player.id });
     expect(duplicateJoin.wasCreated).toBe(false);
 
-    await expect(joinBattle({ battleId: created.id, userId: otherHost.id, role: 'host' })).rejects.toMatchObject({ status: 409 });
-
-    expect(joinEvents.filter((event) => event.battleId === created.id)).toHaveLength(2);
+    expect(joinEvents.filter((event) => event.battleId === created.id)).toHaveLength(3);
   });
 
   it('allows starting battles from the lobby state', async () => {
+    const owner = await createUser({ username: 'start-owner' });
+
     const created = await createBattle({
       name: 'Startable Battle',
       startMode: 'manual',
+      createdByUserId: owner.id,
     });
 
     await updateBattle(created.id, { status: 'ready' });

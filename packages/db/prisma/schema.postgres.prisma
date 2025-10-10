@@ -20,9 +20,15 @@ enum BattleStatus {
 }
 
 enum BattleParticipantRole {
-  host
+  owner
+  admin
+  editor
   player
-  spectator
+}
+
+enum BattleParticipantStatus {
+  pending
+  accepted
 }
 
 model User {
@@ -60,13 +66,15 @@ model Battle {
 }
 
 model BattleParticipant {
-  id        String                 @id @db.Uuid
-  battleId  String                 @map("battle_id") @db.Uuid
-  userId    String                 @map("user_id") @db.Uuid
-  role      BattleParticipantRole
-  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
-  battle    Battle                 @relation(fields: [battleId], references: [id], onDelete: Cascade)
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String                   @id @db.Uuid
+  battleId   String                   @map("battle_id") @db.Uuid
+  userId     String                   @map("user_id") @db.Uuid
+  role       BattleParticipantRole
+  status     BattleParticipantStatus  @default(pending)
+  acceptedAt DateTime?                @map("accepted_at") @db.Timestamptz(6)
+  createdAt  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  battle     Battle                   @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("battle_participants")
   @@unique([battleId, userId])

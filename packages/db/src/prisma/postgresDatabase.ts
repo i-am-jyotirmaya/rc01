@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/postgres/index.js";
 import type { DatabaseClient, DatabaseKind } from "../databaseClient.js";
 import {
   mapBattle,
@@ -6,6 +6,7 @@ import {
   mapUser,
   toBattleCreateData,
   toBattleParticipantCreateData,
+  toBattleParticipantUpdateData,
   toBattleUpdateData,
   toUserCreateData,
 } from "./mappers.js";
@@ -17,6 +18,7 @@ import type {
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from "../types.js";
 
@@ -166,6 +168,17 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       });
       return participants.map(mapBattleParticipant);
     },
+
+    updateById: async (
+      id: string,
+      payload: UpdateBattleParticipantPayload,
+    ): Promise<DbBattleParticipantRow> => {
+      const updated = await this.prisma.battleParticipant.update({
+        where: { id },
+        data: toBattleParticipantUpdateData(payload),
+      });
+      return mapBattleParticipant(updated);
+    },
   };
 
   public async runMigrations(): Promise<void> {
@@ -232,14 +245,17 @@ export class PrismaPostgresDatabase implements DatabaseClient {
           battle_id UUID NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
           user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           role VARCHAR(16) NOT NULL DEFAULT 'player',
+          status VARCHAR(16) NOT NULL DEFAULT 'pending',
+          accepted_at TIMESTAMPTZ,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          CHECK (role IN ('host', 'player', 'spectator')),
+          CHECK (role IN ('owner', 'admin', 'editor', 'player')),
+          CHECK (status IN ('pending', 'accepted')),
           UNIQUE (battle_id, user_id)
         );
       `);
 
       await tx.$executeRawUnsafe(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_host ON battle_participants (battle_id) WHERE role = 'host';",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
       );
     });
   }

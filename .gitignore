@@ -16,3 +16,5 @@ apps/app-backend/storage/
 
 # Turborepo
 .turbo
+packages/db/src/generated/
+packages/db/prisma/memory*

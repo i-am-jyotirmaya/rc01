@@ -316,14 +316,30 @@ export interface BattleRecord {
   updatedAt: string;
 }
 
-export type BattleParticipantRole = 'host' | 'player' | 'spectator';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player';
+
+export type BattleParticipantStatus = 'pending' | 'accepted';
+
+export type BattlePermission =
+  | 'battle.view'
+  | 'battle.configure'
+  | 'battle.manageProblems'
+  | 'battle.manageParticipants'
+  | 'battle.manageInvitations'
+  | 'battle.start'
+  | 'battle.play'
+  | 'battle.submitSolution'
+  | 'battle.viewSubmissions';
 
 export interface BattleParticipantRecord {
   id: string;
   battleId: string;
   userId: string;
   role: BattleParticipantRole;
-  joinedAt: string;
+  status: BattleParticipantStatus;
+  permissions: BattlePermission[];
+  invitedAt: string;
+  joinedAt: string | null;
 }
 
 export interface CreateBattleRequestPayload {

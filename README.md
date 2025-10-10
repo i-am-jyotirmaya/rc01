@@ -67,12 +67,17 @@ codebattle-arena/
 The monorepo now includes a dedicated File Manager HTTP service responsible for storing Markdown problem statements on a shared volume. Key capabilities include:
 
 - REST endpoints to list, read, and create Markdown problems.
+- Metadata persisted in a lightweight SQLite database so catalog operations avoid re-parsing Markdown files.
 - Configurable storage root via the `PROBLEM_STORAGE_ROOT` environment variable.
 - Enforced payload limits (`FILE_MANAGER_MAX_SIZE_MB`) to prevent oversized uploads.
 - Docker Compose integration with a persistent `problem_markdown_data` volume shared with the backend.
 - Routes are protected by the `FILE_MANAGER_ADMIN_TOKEN` shared secret—copy `.env.example` to `.env` and update the token before bringing services up.
 
-> The service lives under `apps/file-manager-service` and ships with a Dockerfile so it can run alongside the rest of the stack.
+> The service lives under `apps/file-manager-service` and ships with a Dockerfile so it can run alongside the rest of the stack. Core problem-management logic now resides in the shared `@rc01/file-manager` package so other services (like the backend) can embed the same functionality without running the HTTP service.
+
+### Dual operating modes
+
+The backend can either talk to the HTTP service or invoke the shared package directly. Toggle the mode with `FILE_MANAGER_MODE` (`service` by default, `package` for in-process usage). When running in package mode the backend will write Markdown files and the SQLite metadata database to `FILE_MANAGER_STORAGE_ROOT` (defaults to `<storageDir>/problems`). Override the database path with `FILE_MANAGER_DATABASE_FILE` if needed.
 
 ## 🧩 Problem Template & Admin Workflow
 

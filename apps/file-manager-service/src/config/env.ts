@@ -10,6 +10,7 @@ const envSchema = z
     NODE_ENV: z.string().optional(),
     FILE_MANAGER_PORT: z.string().optional(),
     PROBLEM_STORAGE_ROOT: z.string().optional(),
+    FILE_MANAGER_DATABASE_FILE: z.string().optional(),
     FILE_MANAGER_MAX_SIZE_MB: z.string().optional(),
     FILE_MANAGER_ADMIN_TOKEN: z
       .string({ required_error: 'FILE_MANAGER_ADMIN_TOKEN is required' })
@@ -18,8 +19,10 @@ const envSchema = z
   .transform((value) => ({
     nodeEnv: value.NODE_ENV ?? 'development',
     port: Number.parseInt(value.FILE_MANAGER_PORT ?? '', 10),
-    storageRoot:
-      value.PROBLEM_STORAGE_ROOT ?? path.resolve(process.cwd(), 'problems'),
+    storageRoot: value.PROBLEM_STORAGE_ROOT ?? path.resolve(process.cwd(), 'problems'),
+    databaseFile:
+      value.FILE_MANAGER_DATABASE_FILE ??
+      path.join(value.PROBLEM_STORAGE_ROOT ?? path.resolve(process.cwd(), 'problems'), 'file-manager.sqlite'),
     maxProblemSizeMb: Number.parseInt(value.FILE_MANAGER_MAX_SIZE_MB ?? '', 10),
     adminToken: value.FILE_MANAGER_ADMIN_TOKEN,
   }));
@@ -45,6 +48,7 @@ export const env = {
   nodeEnv: parsed.data.nodeEnv,
   port: normalizeNumber(parsed.data.port, defaultPort),
   storageRoot: parsed.data.storageRoot,
+  databaseFile: parsed.data.databaseFile,
   maxProblemSizeMb: normalizeNumber(parsed.data.maxProblemSizeMb, defaultMaxSizeMb),
   adminToken: parsed.data.adminToken,
 };

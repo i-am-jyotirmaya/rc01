@@ -7,16 +7,17 @@ import type { HttpError } from 'http-errors';
 import { ZodError } from 'zod';
 
 import { env } from './config/env.js';
+import { createFileManager } from '@rc01/file-manager';
+
 import { createProblemRouter } from './routes/problems.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
-import { ProblemStore } from './services/problemStore.js';
-import { ensureDirectory } from './utils/files.js';
 
 export const createServer = async (): Promise<Express> => {
-  await ensureDirectory(env.storageRoot);
-
   const app = express();
-  const store = new ProblemStore(env.storageRoot);
+  const fileManager = await createFileManager({
+    storageRoot: env.storageRoot,
+    databaseFile: env.databaseFile,
+  });
 
   app.use(helmet());
   app.use(cors());
@@ -27,7 +28,11 @@ export const createServer = async (): Promise<Express> => {
     res.json({ status: 'ok' });
   });
 
-  app.use('/problems', requireAdmin(env.adminToken), createProblemRouter(store, { maxProblemSizeMb: env.maxProblemSizeMb }));
+  app.use(
+    '/problems',
+    requireAdmin(env.adminToken),
+    createProblemRouter(fileManager, { maxProblemSizeMb: env.maxProblemSizeMb }),
+  );
 
   app.use((_req: Request, _res: Response, next: NextFunction) => {
     next(createHttpError(404, 'Route not found'));

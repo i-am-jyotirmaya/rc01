@@ -11,6 +11,7 @@ export type BattleStatus =
 export type DbUserRow = {
   id: string;
   username: string;
+  email: string;
   first_name: string;
   last_name: string;
   password_hash: string;
@@ -21,6 +22,7 @@ export type DbUserRow = {
 export type CreateUserPayload = {
   id: string;
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   passwordHash: string;

@@ -14,6 +14,7 @@ export type DatabaseKind = 'postgres' | 'sqlite';
 export interface UsersRepository {
   insert(payload: CreateUserPayload): Promise<DbUserRow>;
   findByUsername(username: string): Promise<DbUserRow | null>;
+  findByEmail(email: string): Promise<DbUserRow | null>;
   findById(id: string): Promise<DbUserRow | null>;
 }
 

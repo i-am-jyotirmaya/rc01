@@ -59,10 +59,17 @@ const loadPersistedAuth = (): PersistedAuth | null => {
     }
 
     const token = typeof parsed.token === "string" ? parsed.token : null;
-    const user =
-      parsed.user && typeof parsed.user === "object"
-        ? (parsed.user as AuthUserPayload)
-        : null;
+    let user: AuthUserPayload | null = null;
+    if (parsed.user && typeof parsed.user === "object") {
+      const persistedUser = parsed.user as Partial<AuthUserPayload> & {
+        email?: unknown;
+      };
+
+      user = {
+        ...persistedUser,
+        email: typeof persistedUser.email === "string" ? persistedUser.email : "",
+      } as AuthUserPayload;
+    }
 
     return { token, user };
   } catch {

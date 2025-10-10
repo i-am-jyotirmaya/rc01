@@ -11,6 +11,10 @@ export const findUserByUsername = async (username: string): Promise<DbUserRow | 
   return getDb().users.findByUsername(username);
 };
 
+export const findUserByEmail = async (email: string): Promise<DbUserRow | null> => {
+  return getDb().users.findByEmail(email);
+};
+
 export const findUserById = async (id: string): Promise<DbUserRow | null> => {
   return getDb().users.findById(id);
 };

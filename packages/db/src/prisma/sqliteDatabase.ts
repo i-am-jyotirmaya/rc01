@@ -51,6 +51,11 @@ export class PrismaSqliteDatabase implements DatabaseClient {
       return found ? mapUser(found) : null;
     },
 
+    findByEmail: async (email: string): Promise<DbUserRow | null> => {
+      const found = await this.prisma.user.findUnique({ where: { email } });
+      return found ? mapUser(found) : null;
+    },
+
     findById: async (id: string): Promise<DbUserRow | null> => {
       const found = await this.prisma.user.findUnique({ where: { id } });
       return found ? mapUser(found) : null;
@@ -169,6 +174,7 @@ export class PrismaSqliteDatabase implements DatabaseClient {
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
           username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
           first_name TEXT NOT NULL,
           last_name TEXT NOT NULL,
           password_hash TEXT NOT NULL,
@@ -177,8 +183,24 @@ export class PrismaSqliteDatabase implements DatabaseClient {
         );
       `);
 
+      try {
+        await tx.$executeRawUnsafe("ALTER TABLE users ADD COLUMN email TEXT");
+      } catch (error) {
+        if (!String(error).includes('duplicate column name')) {
+          throw error;
+        }
+      }
+
+      await tx.$executeRawUnsafe(
+        "UPDATE users SET email = lower(username) || '@example.invalid' WHERE email IS NULL OR trim(email) = '';",
+      );
+
       await tx.$executeRawUnsafe(
         "CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);",
+      );
+
+      await tx.$executeRawUnsafe(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email);",
       );
 
       await tx.$executeRawUnsafe(`

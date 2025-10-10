@@ -5,6 +5,7 @@ import { authenticateUser, registerUser } from '../services/authService.js';
 
 const registerSchema = z.object({
   username: z.string().min(3).max(64),
+  email: z.string().email().max(320),
   firstName: z.string().min(1).max(120),
   lastName: z.string().min(1).max(120),
   password: z.string().min(8).max(128),
@@ -25,6 +26,7 @@ export const registerHandler: RequestHandler = async (req, res, next) => {
 
     const authResponse = await registerUser({
       username: parsed.data.username,
+      email: parsed.data.email,
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
       password: parsed.data.password,

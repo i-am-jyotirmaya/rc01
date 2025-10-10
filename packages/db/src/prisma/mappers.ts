@@ -12,6 +12,7 @@ import type {
 export type PrismaUserRecord = {
   id: string;
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   passwordHash: string;
@@ -43,6 +44,7 @@ export type PrismaBattleParticipantRecord = {
 export const mapUser = (user: PrismaUserRecord): DbUserRow => ({
   id: user.id,
   username: user.username,
+  email: user.email,
   first_name: user.firstName,
   last_name: user.lastName,
   password_hash: user.passwordHash,
@@ -76,6 +78,7 @@ export const mapBattleParticipant = (
 export const toUserCreateData = (payload: CreateUserPayload) => ({
   id: payload.id,
   username: payload.username,
+  email: payload.email,
   firstName: payload.firstName,
   lastName: payload.lastName,
   passwordHash: payload.passwordHash,

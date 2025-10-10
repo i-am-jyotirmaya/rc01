@@ -254,6 +254,30 @@ export class PrismaSqliteDatabase implements DatabaseClient {
         );
       `);
 
+      try {
+        await tx.$executeRawUnsafe(
+          "ALTER TABLE battle_participants ADD COLUMN status TEXT NOT NULL DEFAULT 'pending';",
+        );
+      } catch (error) {
+        if (!String(error).includes("duplicate column name")) {
+          throw error;
+        }
+      }
+
+      await tx.$executeRawUnsafe(
+        "UPDATE battle_participants SET status = 'pending' WHERE status IS NULL;",
+      );
+
+      try {
+        await tx.$executeRawUnsafe(
+          "ALTER TABLE battle_participants ADD COLUMN accepted_at DATETIME;",
+        );
+      } catch (error) {
+        if (!String(error).includes("duplicate column name")) {
+          throw error;
+        }
+      }
+
       await tx.$executeRawUnsafe(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
       );

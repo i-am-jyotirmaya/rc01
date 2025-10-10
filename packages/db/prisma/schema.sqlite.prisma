@@ -28,6 +28,7 @@ enum BattleParticipantRole {
 model User {
   id           String   @id
   username     String   @unique
+  email        String   @unique
   firstName    String   @map("first_name")
   lastName     String   @map("last_name")
   passwordHash String   @map("password_hash")
@@ -37,6 +38,7 @@ model User {
 
   @@map("users")
   @@index([username], map: "idx_users_username")
+  @@index([email], map: "idx_users_email")
 }
 
 model Battle {

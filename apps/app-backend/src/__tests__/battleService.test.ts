@@ -17,6 +17,7 @@ const createUser = async (overrides: Partial<{ username: string }> = {}) => {
   await insertUser({
     id,
     username,
+    email: `${username}@example.com`,
     firstName: 'Test',
     lastName: 'User',
     passwordHash: 'hashed',

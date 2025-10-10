@@ -8,6 +8,7 @@ import { logout, openLoginModal } from "../../features/auth/authSlice";
 import { selectAuthUser } from "../../features/auth/selectors";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { ThemeToggle } from "./ThemeToggle";
+import { apiLayer } from "../../services/api";
 
 const { Header } = Layout;
 
@@ -71,6 +72,39 @@ export const AppNavbar: FC = () => {
 
     return (user.username?.[0] ?? "?").toUpperCase();
   }, [user]);
+
+  const avatarSrc = useMemo(() => {
+    if (!user?.photoPath) {
+      return undefined;
+    }
+
+    if (/^https?:\/\//i.test(user.photoPath)) {
+      return user.photoPath;
+    }
+
+    const normalizedPath = user.photoPath.startsWith("/")
+      ? user.photoPath
+      : `/${user.photoPath}`;
+    const baseUrl = apiLayer.client.getBaseUrl();
+
+    if (!baseUrl) {
+      return normalizedPath;
+    }
+
+    return `${baseUrl}${normalizedPath}`;
+  }, [user?.photoPath]);
+
+  const avatarStyle = useMemo<CSSProperties>(() => {
+    if (avatarSrc) {
+      return { backgroundColor: "transparent" };
+    }
+
+    return {
+      backgroundColor: token.colorPrimary,
+      color: "#ffffff",
+      fontWeight: 600,
+    };
+  }, [avatarSrc, token.colorPrimary]);
 
   const handleLoginClick = useCallback(() => {
     dispatch(openLoginModal());
@@ -167,11 +201,9 @@ export const AppNavbar: FC = () => {
               <Space size={8} align="center">
                 <Avatar
                   size="small"
-                  style={{
-                    backgroundColor: token.colorPrimary,
-                    color: "#ffffff",
-                    fontWeight: 600,
-                  }}
+                  src={avatarSrc}
+                  alt={displayName}
+                  style={avatarStyle}
                 >
                   {avatarLabel}
                 </Avatar>

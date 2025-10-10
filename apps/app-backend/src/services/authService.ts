@@ -3,13 +3,14 @@ import bcrypt from 'bcryptjs';
 import createHttpError from 'http-errors';
 import sharp from 'sharp';
 import { v4 as uuid } from 'uuid';
-import { insertUser, findUserByUsername, type DbUserRow } from '@rc01/db';
+import { insertUser, findUserByUsername, findUserByEmail, type DbUserRow } from '@rc01/db';
 import { env } from '../config/env.js';
 import { ensureDirectory } from '../utils/filesystem.js';
 import { signAuthToken } from '../utils/tokens.js';
 
 type RegisterInput = {
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   password: string;
@@ -27,6 +28,7 @@ type LoginInput = {
 export type PublicUser = {
   id: string;
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   photoPath: string | null;
@@ -41,6 +43,7 @@ export type AuthResponse = {
 export const toPublicUser = (user: DbUserRow): PublicUser => ({
   id: user.id,
   username: user.username,
+  email: user.email,
   firstName: user.first_name,
   lastName: user.last_name,
   photoPath: user.photo_path,
@@ -77,6 +80,12 @@ export const registerUser = async (input: RegisterInput): Promise<AuthResponse> 
     throw createHttpError(409, 'Username is already in use');
   }
 
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const existingEmail = await findUserByEmail(normalizedEmail);
+  if (existingEmail) {
+    throw createHttpError(409, 'Email is already in use');
+  }
+
   const passwordHash = await bcrypt.hash(input.password, 12);
   const photoPath = input.photo ? await saveProfilePhoto(input.photo) : null;
   const userId = uuid();
@@ -84,6 +93,7 @@ export const registerUser = async (input: RegisterInput): Promise<AuthResponse> 
   const createdUser = await insertUser({
     id: userId,
     username: input.username,
+    email: normalizedEmail,
     firstName: input.firstName,
     lastName: input.lastName,
     passwordHash,

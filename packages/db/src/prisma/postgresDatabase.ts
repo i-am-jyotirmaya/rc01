@@ -51,6 +51,11 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       return found ? mapUser(found) : null;
     },
 
+    findByEmail: async (email: string): Promise<DbUserRow | null> => {
+      const found = await this.prisma.user.findUnique({ where: { email } });
+      return found ? mapUser(found) : null;
+    },
+
     findById: async (id: string): Promise<DbUserRow | null> => {
       const found = await this.prisma.user.findUnique({ where: { id } });
       return found ? mapUser(found) : null;
@@ -169,6 +174,7 @@ export class PrismaPostgresDatabase implements DatabaseClient {
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY,
           username VARCHAR(64) UNIQUE NOT NULL,
+          email VARCHAR(320) UNIQUE NOT NULL,
           first_name VARCHAR(120) NOT NULL,
           last_name VARCHAR(120) NOT NULL,
           password_hash TEXT NOT NULL,
@@ -178,7 +184,23 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       `);
 
       await tx.$executeRawUnsafe(
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(320)`,
+      );
+
+      await tx.$executeRawUnsafe(
+        `UPDATE users SET email = lower(username) || '@example.invalid' WHERE email IS NULL OR trim(email) = ''`,
+      );
+
+      await tx.$executeRawUnsafe(
+        `ALTER TABLE users ALTER COLUMN email SET NOT NULL`,
+      );
+
+      await tx.$executeRawUnsafe(
         "CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);",
+      );
+
+      await tx.$executeRawUnsafe(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email);",
       );
 
       await tx.$executeRawUnsafe(`

@@ -28,6 +28,7 @@ const titleByMode: Record<AuthUiMode, string> = {
 
 type RegisterFormValues = {
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   password: string;
@@ -92,6 +93,7 @@ export const AuthModal: FC = () => {
     (values: RegisterFormValues) => {
       const request: RegisterRequestPayload = {
         username: values.username.trim(),
+        email: values.email.trim().toLowerCase(),
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         password: values.password,
@@ -189,115 +191,131 @@ export const AuthModal: FC = () => {
               Log in
             </Button>
           </Form>
-        ) : (
-          <Form
-            form={registerForm}
-            layout="vertical"
-            onFinish={handleRegisterFinish}
-            autoComplete="on"
-            requiredMark="optional"
-          >
-            <Form.Item
-              label="Username"
-              name="username"
-              rules={[
-                { required: true, message: "Choose a username." },
-                {
-                  min: 3,
-                  message: "Usernames need to be at least 3 characters long.",
-                },
-                { max: 64, message: "Usernames cannot exceed 64 characters." },
-              ]}
+          ) : (
+            <Form
+              form={registerForm}
+              layout="vertical"
+              onFinish={handleRegisterFinish}
+              autoComplete="on"
+              requiredMark="optional"
             >
-              <Input
-                placeholder="your_username"
-                autoFocus
-                allowClear
-                autoComplete="username"
-              />
-            </Form.Item>
-            <Form.Item
-              label="First name"
-              name="firstName"
-              rules={[
-                { required: true, message: "Tell us your first name." },
-                { max: 120, message: "Keep it under 120 characters." },
-              ]}
-            >
-              <Input placeholder="Jane" allowClear autoComplete="given-name" />
-            </Form.Item>
-            <Form.Item
-              label="Last name"
-              name="lastName"
-              rules={[
-                { required: true, message: "What is your last name?" },
-                { max: 120, message: "Keep it under 120 characters." },
-              ]}
-            >
-              <Input placeholder="Doe" allowClear autoComplete="family-name" />
-            </Form.Item>
-            <Form.Item
-              label="Password"
-              name="password"
-              rules={[
-                { required: true, message: "Choose a password." },
-                {
-                  min: 8,
-                  message: "Create a password with at least 8 characters.",
-                },
-              ]}
-            >
-              <Input.Password
-                placeholder="Create a password"
-                autoComplete="new-password"
-              />
-            </Form.Item>
-            <Form.Item
-              label="Confirm password"
-              name="confirmPassword"
-              dependencies={["password"]}
-              rules={[
-                { required: true, message: "Confirm your password." },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue("password") === value) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(new Error("Passwords do not match."));
+              <Form.Item
+                label="Username"
+                name="username"
+                rules={[
+                  { required: true, message: "Choose a username." },
+                  {
+                    min: 3,
+                    message: "Usernames need to be at least 3 characters long.",
                   },
-                }),
-              ]}
-            >
-              <Input.Password
-                placeholder="Repeat your password"
-                autoComplete="new-password"
-              />
-            </Form.Item>
-            <Form.Item
-              label="Profile photo"
-              name="photo"
-              valuePropName="fileList"
-              getValueFromEvent={normalizeUploadValue}
-              extra="Optional. Upload a PNG or JPG image (max 5 MB)."
-            >
-              <Upload
-                beforeUpload={() => false}
-                accept="image/png,image/jpeg"
-                maxCount={1}
-                listType="picture"
+                  { max: 64, message: "Usernames cannot exceed 64 characters." },
+                ]}
               >
-                <Button icon={<UploadOutlined />}>Select image</Button>
-              </Upload>
-            </Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              loading={isSubmitting}
-            >
-              Create account
-            </Button>
-          </Form>
+                <Input
+                  placeholder="your_username"
+                  autoFocus
+                  allowClear
+                  autoComplete="username"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Email"
+                name="email"
+                rules={[
+                  { required: true, message: "We need your email to stay in touch." },
+                  { type: "email", message: "Enter a valid email address." },
+                  { max: 320, message: "Emails cannot exceed 320 characters." },
+                ]}
+              >
+                <Input
+                  placeholder="you@example.com"
+                  allowClear
+                  autoComplete="email"
+                  inputMode="email"
+                />
+              </Form.Item>
+              <Form.Item
+                label="First name"
+                name="firstName"
+                rules={[
+                  { required: true, message: "Tell us your first name." },
+                  { max: 120, message: "Keep it under 120 characters." },
+                ]}
+              >
+                <Input placeholder="Jane" allowClear autoComplete="given-name" />
+              </Form.Item>
+              <Form.Item
+                label="Last name"
+                name="lastName"
+                rules={[
+                  { required: true, message: "What is your last name?" },
+                  { max: 120, message: "Keep it under 120 characters." },
+                ]}
+              >
+                <Input placeholder="Doe" allowClear autoComplete="family-name" />
+              </Form.Item>
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[
+                  { required: true, message: "Choose a password." },
+                  {
+                    min: 8,
+                    message: "Create a password with at least 8 characters.",
+                  },
+                ]}
+              >
+                <Input.Password
+                  placeholder="Create a password"
+                  autoComplete="new-password"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Confirm password"
+                name="confirmPassword"
+                dependencies={["password"]}
+                rules={[
+                  { required: true, message: "Confirm your password." },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("password") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error("Passwords do not match."));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password
+                  placeholder="Repeat your password"
+                  autoComplete="new-password"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Profile photo"
+                name="photo"
+                valuePropName="fileList"
+                getValueFromEvent={normalizeUploadValue}
+                extra="Optional. Upload a PNG or JPG image (max 5 MB)."
+              >
+                <Upload
+                  beforeUpload={() => false}
+                  accept="image/png,image/jpeg"
+                  maxCount={1}
+                  listType="picture"
+                >
+                  <Button icon={<UploadOutlined />}>Select image</Button>
+                </Upload>
+              </Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                loading={isSubmitting}
+              >
+                Create account
+              </Button>
+            </Form>
         )}
 
         <Typography.Paragraph style={{ marginBottom: 0 }}>

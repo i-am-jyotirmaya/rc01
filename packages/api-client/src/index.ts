@@ -224,6 +224,7 @@ export type LoginResponsePayload = AuthResponsePayload;
 
 export interface RegisterRequestPayload {
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   password: string;
@@ -235,6 +236,7 @@ export type RegisterResponsePayload = AuthResponsePayload;
 export interface AuthUserPayload {
   id: string;
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   photoPath: string | null;
@@ -273,6 +275,7 @@ export class AuthApi {
   register(payload: RegisterRequestPayload) {
     const formData = new FormData();
     formData.append("username", payload.username);
+    formData.append("email", payload.email);
     formData.append("firstName", payload.firstName);
     formData.append("lastName", payload.lastName);
     formData.append("password", payload.password);

@@ -5,26 +5,8 @@
     "rootDir": "src",
     "baseUrl": ".",
     "module": "NodeNext",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "paths": {
-      "@rc01/db": [
-        "../../packages/db/src/index.ts"
-      ],
-      "@rc01/db/*": [
-        "../../packages/db/src/*"
-      ]
-    },
+    "types": ["node", "vitest/globals"],
     "moduleResolution": "NodeNext"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../../packages/db"
-    }
-  ]
+  "include": ["src"]
 }

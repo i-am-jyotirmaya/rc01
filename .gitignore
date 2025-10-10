@@ -13,3 +13,6 @@ apps/app-backend/storage/
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Turborepo
+.turbo

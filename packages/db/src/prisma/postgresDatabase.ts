@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import type { DatabaseClient, DatabaseKind } from '../databaseClient.js';
+import { PrismaClient } from "@prisma/client";
+import type { DatabaseClient, DatabaseKind } from "../databaseClient.js";
 import {
   mapBattle,
   mapBattleParticipant,
@@ -8,7 +8,7 @@ import {
   toBattleParticipantCreateData,
   toBattleUpdateData,
   toUserCreateData,
-} from './mappers.js';
+} from "./mappers.js";
 import type {
   BattleParticipantRole,
   CreateBattleParticipantPayload,
@@ -18,10 +18,10 @@ import type {
   DbBattleRow,
   DbUserRow,
   UpdateBattlePayload,
-} from '../types.js';
+} from "../types.js";
 
 export class PrismaPostgresDatabase implements DatabaseClient {
-  public readonly kind: DatabaseKind = 'postgres';
+  public readonly kind: DatabaseKind = "postgres";
   private readonly prisma: PrismaClient;
 
   constructor(databaseUrl?: string) {
@@ -40,7 +40,9 @@ export class PrismaPostgresDatabase implements DatabaseClient {
 
   public readonly users = {
     insert: async (payload: CreateUserPayload): Promise<DbUserRow> => {
-      const created = await this.prisma.user.create({ data: toUserCreateData(payload) });
+      const created = await this.prisma.user.create({
+        data: toUserCreateData(payload),
+      });
       return mapUser(created);
     },
 
@@ -57,12 +59,16 @@ export class PrismaPostgresDatabase implements DatabaseClient {
 
   public readonly battles = {
     insert: async (payload: CreateBattlePayload): Promise<DbBattleRow> => {
-      const created = await this.prisma.battle.create({ data: toBattleCreateData(payload) });
+      const created = await this.prisma.battle.create({
+        data: toBattleCreateData(payload),
+      });
       return mapBattle(created);
     },
 
     list: async (): Promise<DbBattleRow[]> => {
-      const battles = await this.prisma.battle.findMany({ orderBy: { createdAt: 'desc' } });
+      const battles = await this.prisma.battle.findMany({
+        orderBy: { createdAt: "desc" },
+      });
       return battles.map(mapBattle);
     },
 
@@ -71,9 +77,9 @@ export class PrismaPostgresDatabase implements DatabaseClient {
         where: {
           autoStart: true,
           scheduledStartAt: { not: null },
-          status: { in: ['scheduled', 'lobby'] },
+          status: { in: ["scheduled", "lobby"] },
         },
-        orderBy: { scheduledStartAt: 'asc' },
+        orderBy: { scheduledStartAt: "asc" },
       });
       return battles.map(mapBattle);
     },
@@ -83,7 +89,10 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       return found ? mapBattle(found) : null;
     },
 
-    updateById: async (id: string, payload: UpdateBattlePayload): Promise<DbBattleRow | null> => {
+    updateById: async (
+      id: string,
+      payload: UpdateBattlePayload,
+    ): Promise<DbBattleRow | null> => {
       const data = toBattleUpdateData(payload);
       if (Object.keys(data).length === 0) {
         const existing = await this.prisma.battle.findUnique({ where: { id } });
@@ -91,10 +100,13 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       }
 
       try {
-        const updated = await this.prisma.battle.update({ where: { id }, data });
+        const updated = await this.prisma.battle.update({
+          where: { id },
+          data,
+        });
         return mapBattle(updated);
       } catch (error) {
-        if ((error as { code?: string }).code === 'P2025') {
+        if ((error as { code?: string }).code === "P2025") {
           return null;
         }
         throw error;
@@ -103,12 +115,19 @@ export class PrismaPostgresDatabase implements DatabaseClient {
   };
 
   public readonly battleParticipants = {
-    insert: async (payload: CreateBattleParticipantPayload): Promise<DbBattleParticipantRow> => {
-      const created = await this.prisma.battleParticipant.create({ data: toBattleParticipantCreateData(payload) });
+    insert: async (
+      payload: CreateBattleParticipantPayload,
+    ): Promise<DbBattleParticipantRow> => {
+      const created = await this.prisma.battleParticipant.create({
+        data: toBattleParticipantCreateData(payload),
+      });
       return mapBattleParticipant(created);
     },
 
-    find: async (battleId: string, userId: string): Promise<DbBattleParticipantRow | null> => {
+    find: async (
+      battleId: string,
+      userId: string,
+    ): Promise<DbBattleParticipantRow | null> => {
       const found = await this.prisma.battleParticipant.findUnique({
         where: {
           battleId_userId: {
@@ -133,17 +152,19 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       return found ? mapBattleParticipant(found) : null;
     },
 
-    listByBattle: async (battleId: string): Promise<DbBattleParticipantRow[]> => {
+    listByBattle: async (
+      battleId: string,
+    ): Promise<DbBattleParticipantRow[]> => {
       const participants = await this.prisma.battleParticipant.findMany({
         where: { battleId },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       });
       return participants.map(mapBattleParticipant);
     },
   };
 
   public async runMigrations(): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: PrismaClient) => {
       await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY,
@@ -156,7 +177,9 @@ export class PrismaPostgresDatabase implements DatabaseClient {
         );
       `);
 
-      await tx.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);');
+      await tx.$executeRawUnsafe(
+        "CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);",
+      );
 
       await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS battles (
@@ -174,9 +197,11 @@ export class PrismaPostgresDatabase implements DatabaseClient {
         );
       `);
 
-      await tx.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);');
       await tx.$executeRawUnsafe(
-        'CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at);',
+        "CREATE INDEX IF NOT EXISTS idx_battles_status ON battles (status);",
+      );
+      await tx.$executeRawUnsafe(
+        "CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at);",
       );
 
       await tx.$executeRawUnsafe(`

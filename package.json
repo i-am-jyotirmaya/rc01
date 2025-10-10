@@ -11,10 +11,14 @@
     "fileman:dev": "pnpm --filter @rc01/file-manager-service run dev",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
     "typescript": "~5.8.3"
   },
   "packageManager": "pnpm@10.18.0"

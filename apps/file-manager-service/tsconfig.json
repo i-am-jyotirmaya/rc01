@@ -9,18 +9,9 @@
       "@rc01/problem-template": [
         "../../packages/problem-template/src/index.ts"
       ],
-      "@rc01/problem-template/*": [
-        "../../packages/problem-template/src/*"
-      ]
+      "@rc01/problem-template/*": ["../../packages/problem-template/src/*"]
     },
     "moduleResolution": "NodeNext"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../../packages/problem-template"
-    }
-  ]
+  "include": ["src"]
 }

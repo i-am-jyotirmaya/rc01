@@ -5,6 +5,8 @@ import {
   type FileManager,
   type ProblemMetadata as FileManagerProblemMetadata,
   type ProblemRecord as FileManagerProblemRecord,
+  ProblemNotFoundError,
+  ProblemTemplateValidationError,
 } from '@rc01/file-manager';
 
 import { env } from '../config/env.js';
@@ -71,6 +73,26 @@ const isPackageMode = env.externalServices.fileManager.mode === 'package';
 
 let packageFileManagerPromise: Promise<FileManager> | null = null;
 
+const mapPackageErrorToHttp = (error: unknown): never => {
+  if (error instanceof ProblemNotFoundError) {
+    throw createHttpError(404, error.message);
+  }
+
+  if (error instanceof ProblemTemplateValidationError) {
+    throw createHttpError(422, error.message);
+  }
+
+  throw error instanceof Error ? error : new Error('Unexpected file manager error');
+};
+
+const withPackageErrorHandling = async <T>(operation: () => Promise<T>): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error) {
+    mapPackageErrorToHttp(error);
+  }
+};
+
 const getPackageFileManager = (): Promise<FileManager> => {
   if (!packageFileManagerPromise) {
     packageFileManagerPromise = createFileManager({
@@ -98,7 +120,7 @@ export const listProblems = async (): Promise<ProblemMetadata[]> => {
 export const getProblem = async (slug: string): Promise<ProblemRecord> => {
   if (isPackageMode) {
     const fileManager = await getPackageFileManager();
-    return fileManager.getProblem(slug);
+    return withPackageErrorHandling(() => fileManager.getProblem(slug));
   }
 
   return fileManagerFetch<FileManagerProblemResponse>(`/problems/${encodeURIComponent(slug)}`, {
@@ -109,7 +131,7 @@ export const getProblem = async (slug: string): Promise<ProblemRecord> => {
 export const createProblemFromContent = async (content: string): Promise<ProblemRecord> => {
   if (isPackageMode) {
     const fileManager = await getPackageFileManager();
-    return fileManager.saveProblem({ content });
+    return withPackageErrorHandling(() => fileManager.saveProblem({ content }));
   }
 
   return fileManagerFetch<FileManagerProblemResponse>('/problems', {
@@ -133,7 +155,7 @@ export const uploadProblemFile = async (file: Express.Multer.File): Promise<Prob
 const deleteProblem = async (slug: string): Promise<void> => {
   if (isPackageMode) {
     const fileManager = await getPackageFileManager();
-    await fileManager.deleteProblem(slug);
+    await withPackageErrorHandling(() => fileManager.deleteProblem(slug));
     return;
   }
 
@@ -148,11 +170,11 @@ export const updateProblemFromContent = async (
 ): Promise<ProblemRecord> => {
   if (isPackageMode) {
     const fileManager = await getPackageFileManager();
-    const problem = await fileManager.saveProblem({ content });
+    const problem = await withPackageErrorHandling(() => fileManager.saveProblem({ content }));
 
     if (problem.slug !== slug) {
       try {
-        await fileManager.deleteProblem(slug);
+        await withPackageErrorHandling(() => fileManager.deleteProblem(slug));
       } catch (error) {
         // ignore delete failures; the new problem was saved successfully and may have a different slug
       }

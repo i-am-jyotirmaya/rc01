@@ -882,7 +882,7 @@ export const updateBattleParticipantRole = async (
     throw createHttpError(403, 'You do not have permission to change participant roles');
   }
 
-  if (input.role === 'owner') {
+  if ((input.role as string) === 'owner') {
     throw createHttpError(400, 'Owner role cannot be reassigned');
   }
 
@@ -1092,7 +1092,7 @@ export const inviteBattleParticipant = async (
     throw createHttpError(403, 'Only owners or admins can assign roles for this battle');
   }
 
-  if (input.role === 'owner') {
+  if ((input.role as string) === 'owner') {
     throw createHttpError(400, 'Owner role cannot be reassigned through invitations');
   }
 

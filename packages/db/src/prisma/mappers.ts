@@ -13,6 +13,7 @@ import type {
   UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from '../types.js';
+import type { Prisma as PostgresPrisma } from '../generated/postgres/index.js';
 
 export type PrismaUserRecord = {
   id: string;
@@ -29,7 +30,7 @@ export type PrismaBattleRecord = {
   id: string;
   name: string;
   shortDescription: string | null;
-  status: DbBattleRow['status'];
+  status: string;
   configuration: unknown;
   autoStart: boolean;
   scheduledStartAt: Date | null;
@@ -58,6 +59,30 @@ export type PrismaBattleInviteRecord = {
   createdAt: Date;
   revokedAt: Date | null;
 };
+
+const toPostgresBattleConfiguration = (
+  configuration: Record<string, unknown> | null | undefined,
+): PostgresPrisma.InputJsonValue => {
+  if (!configuration) {
+    return {} as PostgresPrisma.InputJsonObject;
+  }
+
+  return configuration as PostgresPrisma.InputJsonObject;
+};
+
+const BATTLE_STATUS_VALUES = new Set<DbBattleRow['status']>([
+  'draft',
+  'configuring',
+  'lobby',
+  'scheduled',
+  'ready',
+  'active',
+  'completed',
+  'cancelled',
+]);
+
+const isBattleStatus = (value: unknown): value is DbBattleRow['status'] =>
+  typeof value === 'string' && BATTLE_STATUS_VALUES.has(value as DbBattleRow['status']);
 
 const parseBattleConfiguration = (value: unknown): Record<string, unknown> => {
   if (value === null || value === undefined) {
@@ -99,7 +124,7 @@ export const mapBattle = (battle: PrismaBattleRecord): DbBattleRow => ({
   id: battle.id,
   name: battle.name,
   short_description: battle.shortDescription,
-  status: battle.status,
+  status: isBattleStatus(battle.status) ? battle.status : 'draft',
   configuration: parseBattleConfiguration(battle.configuration),
   auto_start: battle.autoStart,
   scheduled_start_at: battle.scheduledStartAt,
@@ -146,7 +171,7 @@ export const toBattleCreateData = (payload: CreateBattlePayload) => ({
   name: payload.name,
   shortDescription: payload.shortDescription ?? null,
   status: payload.status,
-  configuration: payload.configuration,
+  configuration: toPostgresBattleConfiguration(payload.configuration),
   autoStart: payload.autoStart,
   scheduledStartAt: payload.scheduledStartAt ?? null,
   startedAt: payload.startedAt ?? null,
@@ -173,7 +198,7 @@ export const toBattleUpdateData = (payload: UpdateBattlePayload) => {
   }
 
   if (payload.configuration !== undefined) {
-    data.configuration = payload.configuration;
+    data.configuration = toPostgresBattleConfiguration(payload.configuration);
   }
 
   if (payload.autoStart !== undefined) {

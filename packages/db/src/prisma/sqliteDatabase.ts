@@ -218,7 +218,7 @@ export class PrismaSqliteDatabase implements DatabaseClient {
   };
 
   public async runMigrations(): Promise<void> {
-    await this.prisma.$transaction(async (tx: PrismaClient) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,

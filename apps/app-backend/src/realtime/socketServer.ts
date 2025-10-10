@@ -14,6 +14,11 @@ import {
   BattleClientEvent,
   BattleSocketEvent,
   buildBattleRoomName,
+  type BattleContestantsEventPayload,
+  type BattleInviteEventPayload,
+  type BattleInviteRevokedEventPayload,
+  type BattleParticipantEventPayload,
+  type BattleStatusEventPayload,
   type BattleSubscriptionPayload,
 } from '@rc01/realtime-utils';
 import { findBattleParticipant } from '@rc01/db';
@@ -95,38 +100,60 @@ const handleUnsubscribe = async (
 
 const registerEventBridges = (io: Server): void => {
   battleEvents.on('battle.participant-joined', ({ battleId, participant }) => {
-    broadcast<BattleParticipantRecord>(io, battleId, BattleSocketEvent.ParticipantJoined, { participant });
+    broadcast<BattleParticipantEventPayload<BattleParticipantRecord>>(
+      io,
+      battleId,
+      BattleSocketEvent.ParticipantJoined,
+      { participant },
+    );
   });
 
   battleEvents.on('battle.participant-left', ({ battleId, participant }) => {
-    broadcast<BattleParticipantRecord>(io, battleId, BattleSocketEvent.ParticipantLeft, { participant });
+    broadcast<BattleParticipantEventPayload<BattleParticipantRecord>>(
+      io,
+      battleId,
+      BattleSocketEvent.ParticipantLeft,
+      { participant },
+    );
   });
 
   battleEvents.on('battle.participant-updated', ({ battleId, participant }) => {
-    broadcast<BattleParticipantRecord>(io, battleId, BattleSocketEvent.ParticipantUpdated, { participant });
+    broadcast<BattleParticipantEventPayload<BattleParticipantRecord>>(
+      io,
+      battleId,
+      BattleSocketEvent.ParticipantUpdated,
+      { participant },
+    );
   });
 
   battleEvents.on('battle.contestants-updated', ({ battleId, contestants }) => {
-    broadcast<BattleParticipantRecord[]>(io, battleId, BattleSocketEvent.ContestantsUpdated, { contestants });
+    broadcast<BattleContestantsEventPayload<BattleParticipantRecord>>(
+      io,
+      battleId,
+      BattleSocketEvent.ContestantsUpdated,
+      { contestants },
+    );
   });
 
   battleEvents.on('battle.lobby-opened', (battle: BattleRecord) => {
-    broadcast<BattleRecord>(io, battle.id, BattleSocketEvent.LobbyOpened, { battle });
+    broadcast<{ battle: BattleRecord }>(io, battle.id, BattleSocketEvent.LobbyOpened, { battle });
   });
 
   battleEvents.on('battle.status-changed', ({ battleId, status }) => {
-    broadcast<{ battleId: string; status: string }>(io, battleId, BattleSocketEvent.StatusChanged, {
-      battleId,
-      status,
-    });
+    broadcast<BattleStatusEventPayload>(io, battleId, BattleSocketEvent.StatusChanged, { battleId, status });
   });
 
   battleEvents.on('battle.invite-created', ({ battleId, invite }) => {
-    broadcast<BattleInviteRecord>(io, battleId, BattleSocketEvent.InviteCreated, { invite });
+    broadcast<BattleInviteEventPayload<BattleInviteRecord>>(
+      io,
+      battleId,
+      BattleSocketEvent.InviteCreated,
+      { invite },
+    );
   });
 
   battleEvents.on('battle.invite-revoked', ({ battleId, inviteId }) => {
-    broadcast<{ inviteId: string }>(io, battleId, BattleSocketEvent.InviteRevoked, { inviteId });
+    broadcast<BattleInviteRevokedEventPayload>(io, battleId, BattleSocketEvent.InviteRevoked, { inviteId });
   });
 };
 

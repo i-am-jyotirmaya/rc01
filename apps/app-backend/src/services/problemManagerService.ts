@@ -89,7 +89,7 @@ const withPackageErrorHandling = async <T>(operation: () => Promise<T>): Promise
   try {
     return await operation();
   } catch (error) {
-    mapPackageErrorToHttp(error);
+    return mapPackageErrorToHttp(error);
   }
 };
 

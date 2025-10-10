@@ -255,6 +255,33 @@ export class PrismaPostgresDatabase implements DatabaseClient {
       `);
 
       await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS status VARCHAR(16);",
+      );
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ;",
+      );
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ALTER COLUMN status SET DEFAULT 'pending';",
+      );
+      await tx.$executeRawUnsafe(
+        "UPDATE battle_participants SET status = 'pending' WHERE status IS NULL;",
+      );
+      await tx.$executeRawUnsafe(
+        "ALTER TABLE battle_participants ALTER COLUMN status SET NOT NULL;",
+      );
+      await tx.$executeRawUnsafe(`
+        DO $$
+        BEGIN
+          ALTER TABLE battle_participants
+            ADD CONSTRAINT battle_participants_status_check
+            CHECK (status IN ('pending', 'accepted'));
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END;
+        $$;
+      `);
+
+      await tx.$executeRawUnsafe(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
       );
     });

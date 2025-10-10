@@ -63,14 +63,18 @@ export type UpdateBattlePayload = Partial<{
   startedAt: Date | null;
 }>;
 
-export type BattleParticipantRole = 'host' | 'player' | 'spectator';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player';
+
+export type BattleParticipantStatus = 'pending' | 'accepted';
 
 export type DbBattleParticipantRow = {
   id: string;
   battle_id: string;
   user_id: string;
   role: BattleParticipantRole;
+  status: BattleParticipantStatus;
   created_at: Date;
+  accepted_at: Date | null;
 };
 
 export type CreateBattleParticipantPayload = {
@@ -78,7 +82,15 @@ export type CreateBattleParticipantPayload = {
   battleId: string;
   userId: string;
   role: BattleParticipantRole;
+  status?: BattleParticipantStatus;
+  acceptedAt?: Date | null;
 };
+
+export type UpdateBattleParticipantPayload = Partial<{
+  role: BattleParticipantRole;
+  status: BattleParticipantStatus;
+  acceptedAt: Date | null;
+}>;
 
 export type DatabaseInitOptions = {
   usePostgres?: boolean;

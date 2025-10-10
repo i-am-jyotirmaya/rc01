@@ -3,12 +3,14 @@ import type {
   BattleParticipantRole,
   CreateBattleParticipantPayload,
   DbBattleParticipantRow,
+  UpdateBattleParticipantPayload,
 } from './types.js';
 
 export type {
   BattleParticipantRole,
   CreateBattleParticipantPayload,
   DbBattleParticipantRow,
+  UpdateBattleParticipantPayload,
 } from './types.js';
 
 export const insertBattleParticipant = async (
@@ -35,4 +37,11 @@ export const listBattleParticipantsByBattle = async (
   battleId: string,
 ): Promise<DbBattleParticipantRow[]> => {
   return getDb().battleParticipants.listByBattle(battleId);
+};
+
+export const updateBattleParticipantById = async (
+  id: string,
+  payload: UpdateBattleParticipantPayload,
+): Promise<DbBattleParticipantRow> => {
+  return getDb().battleParticipants.updateById(id, payload);
 };

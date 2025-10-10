@@ -9,12 +9,13 @@ import {
   listScheduledBattles,
   insertBattleParticipant,
   findBattleParticipant,
-  findBattleParticipantByRole,
+  updateBattleParticipantById,
   type BattleStatus,
   type DbBattleRow,
   type UpdateBattlePayload,
   type DbBattleParticipantRow,
   type BattleParticipantRole,
+  type BattleParticipantStatus,
 } from '@rc01/db';
 import { logger } from '../utils/logger.js';
 
@@ -38,8 +39,22 @@ export type BattleParticipantRecord = {
   battleId: string;
   userId: string;
   role: BattleParticipantRole;
-  joinedAt: string;
+  status: BattleParticipantStatus;
+  permissions: BattlePermission[];
+  invitedAt: string;
+  joinedAt: string | null;
 };
+
+export type BattlePermission =
+  | 'battle.view'
+  | 'battle.configure'
+  | 'battle.manageProblems'
+  | 'battle.manageParticipants'
+  | 'battle.manageInvitations'
+  | 'battle.start'
+  | 'battle.play'
+  | 'battle.submitSolution'
+  | 'battle.viewSubmissions';
 
 type BattleEventMap = {
   'battle.lobby-opened': [BattleRecord];
@@ -54,6 +69,7 @@ export type CreateBattleInput = {
   configuration?: Record<string, unknown>;
   startMode: BattleStartMode;
   scheduledStartAt?: Date | null;
+  createdByUserId: string;
 };
 
 export type UpdateBattleInput = Partial<CreateBattleInput> & {
@@ -74,13 +90,62 @@ export type JoinBattleResult = {
 const CONFIGURABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled'];
 const DEFAULT_PARTICIPANT_ROLE: BattleParticipantRole = 'player';
 const PLAYER_JOINABLE_STATUSES: BattleStatus[] = ['lobby', 'active'];
-const ADMIN_JOINABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled', 'lobby', 'active'];
+const MANAGEMENT_JOINABLE_STATUSES: BattleStatus[] = ['draft', 'configuring', 'ready', 'scheduled', 'lobby', 'active'];
+const ACCEPTED_PARTICIPANT_STATUS: BattleParticipantStatus = 'accepted';
+const PENDING_PARTICIPANT_STATUS: BattleParticipantStatus = 'pending';
+
+const ROLE_PERMISSIONS = {
+  owner: [
+    'battle.view',
+    'battle.configure',
+    'battle.manageProblems',
+    'battle.manageParticipants',
+    'battle.manageInvitations',
+    'battle.start',
+    'battle.play',
+    'battle.submitSolution',
+    'battle.viewSubmissions',
+  ],
+  admin: [
+    'battle.view',
+    'battle.configure',
+    'battle.manageProblems',
+    'battle.manageParticipants',
+    'battle.manageInvitations',
+    'battle.start',
+    'battle.play',
+    'battle.submitSolution',
+    'battle.viewSubmissions',
+  ],
+  editor: [
+    'battle.view',
+    'battle.configure',
+    'battle.manageProblems',
+    'battle.play',
+    'battle.submitSolution',
+    'battle.viewSubmissions',
+  ],
+  player: ['battle.view', 'battle.play', 'battle.submitSolution', 'battle.viewSubmissions'],
+} as const satisfies Record<BattleParticipantRole, readonly BattlePermission[]>;
+
+export const battleRoleCapabilities: Readonly<Record<BattleParticipantRole, readonly BattlePermission[]>> = ROLE_PERMISSIONS;
+
+const getPermissionsForRole = (role: BattleParticipantRole): BattlePermission[] => {
+  return Array.from(ROLE_PERMISSIONS[role] ?? []);
+};
+
+export const getBattleRolePermissions = (role: BattleParticipantRole): BattlePermission[] =>
+  getPermissionsForRole(role);
 
 const normalizeParticipantRole = (role?: BattleParticipantRole): BattleParticipantRole => role ?? DEFAULT_PARTICIPANT_ROLE;
 
+const isManagementRole = (role: BattleParticipantRole): boolean => role === 'owner' || role === 'admin' || role === 'editor';
+
+const canAssignRoles = (role: BattleParticipantRole): boolean => role === 'owner' || role === 'admin';
+
 const canRoleJoinBattle = (status: BattleStatus, role: BattleParticipantRole): boolean => {
-  if (role === 'host') {
-    return ADMIN_JOINABLE_STATUSES.includes(status);
+  if (isManagementRole(role)) {
+    return MANAGEMENT_JOINABLE_STATUSES.includes(status);
   }
 
   return PLAYER_JOINABLE_STATUSES.includes(status);
@@ -104,7 +169,10 @@ const toBattleParticipantRecord = (row: DbBattleParticipantRow): BattleParticipa
   battleId: row.battle_id,
   userId: row.user_id,
   role: row.role,
-  joinedAt: row.created_at.toISOString(),
+  status: row.status,
+  permissions: getPermissionsForRole(row.role),
+  invitedAt: row.created_at.toISOString(),
+  joinedAt: row.accepted_at ? row.accepted_at.toISOString() : null,
 });
 
 class BattleScheduler {
@@ -295,6 +363,20 @@ export const createBattle = async (input: CreateBattleInput): Promise<BattleReco
     startedAt: plan.startedAt,
   });
 
+  const ownerParticipant = await insertBattleParticipant({
+    id: uuid(),
+    battleId,
+    userId: input.createdByUserId,
+    role: 'owner',
+    status: ACCEPTED_PARTICIPANT_STATUS,
+    acceptedAt: new Date(),
+  });
+
+  battleEvents.emit('battle.participant-joined', {
+    battleId,
+    participant: toBattleParticipantRecord(ownerParticipant),
+  });
+
   if (created.auto_start && created.scheduled_start_at) {
     scheduler.schedule(created, (battleIdToStart) => startBattle(battleIdToStart));
   }
@@ -372,26 +454,35 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     throw createHttpError(404, 'Battle not found');
   }
 
-  const normalizedRole = normalizeParticipantRole(input.role);
   const existingParticipant = await findBattleParticipant(input.battleId, input.userId);
 
   if (existingParticipant) {
+    if (existingParticipant.status === PENDING_PARTICIPANT_STATUS) {
+      const accepted = await updateBattleParticipantById(existingParticipant.id, {
+        status: ACCEPTED_PARTICIPANT_STATUS,
+        acceptedAt: new Date(),
+      });
+
+      const participant = toBattleParticipantRecord(accepted);
+      battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
+
+      return { participant, wasCreated: false };
+    }
+
     return {
       participant: toBattleParticipantRecord(existingParticipant),
       wasCreated: false,
     };
   }
 
-  if (!canRoleJoinBattle(battle.status, normalizedRole)) {
-    const suffix = normalizedRole === 'host' ? ' as host' : '';
-    throw createHttpError(409, `Battle cannot be joined while in status "${battle.status}"${suffix}`);
+  const normalizedRole = normalizeParticipantRole(input.role);
+
+  if (normalizedRole !== 'player') {
+    throw createHttpError(403, `Only invited users can join with the "${normalizedRole}" role`);
   }
 
-  if (normalizedRole === 'host') {
-    const existingHost = await findBattleParticipantByRole(input.battleId, 'host');
-    if (existingHost && existingHost.user_id !== input.userId) {
-      throw createHttpError(409, 'Battle already has a host assigned');
-    }
+  if (!canRoleJoinBattle(battle.status, normalizedRole)) {
+    throw createHttpError(409, `Battle cannot be joined while in status "${battle.status}"`);
   }
 
   const participantRow = await insertBattleParticipant({
@@ -399,12 +490,72 @@ export const joinBattle = async (input: JoinBattleInput): Promise<JoinBattleResu
     battleId: input.battleId,
     userId: input.userId,
     role: normalizedRole,
+    status: ACCEPTED_PARTICIPANT_STATUS,
+    acceptedAt: new Date(),
   });
 
   const participant = toBattleParticipantRecord(participantRow);
   battleEvents.emit('battle.participant-joined', { battleId: input.battleId, participant });
 
   return { participant, wasCreated: true };
+};
+
+export type InviteBattleParticipantInput = {
+  battleId: string;
+  inviterUserId: string;
+  inviteeUserId: string;
+  role: Exclude<BattleParticipantRole, 'owner'>;
+};
+
+export const inviteBattleParticipant = async (
+  input: InviteBattleParticipantInput,
+): Promise<BattleParticipantRecord> => {
+  const battle = await findBattleById(input.battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  const inviter = await findBattleParticipant(input.battleId, input.inviterUserId);
+  if (!inviter || inviter.status !== ACCEPTED_PARTICIPANT_STATUS || !canAssignRoles(inviter.role)) {
+    throw createHttpError(403, 'Only owners or admins can assign roles for this battle');
+  }
+
+  if (input.role === 'owner') {
+    throw createHttpError(400, 'Owner role cannot be reassigned through invitations');
+  }
+
+  const existingInvitee = await findBattleParticipant(input.battleId, input.inviteeUserId);
+
+  if (existingInvitee) {
+    const updates: { role?: BattleParticipantRole; status?: BattleParticipantStatus; acceptedAt?: Date | null } = {};
+
+    if (existingInvitee.role !== input.role) {
+      updates.role = input.role;
+    }
+
+    if (existingInvitee.status !== PENDING_PARTICIPANT_STATUS || updates.role) {
+      updates.status = PENDING_PARTICIPANT_STATUS;
+      updates.acceptedAt = null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return toBattleParticipantRecord(existingInvitee);
+    }
+
+    const updated = await updateBattleParticipantById(existingInvitee.id, updates);
+    return toBattleParticipantRecord(updated);
+  }
+
+  const created = await insertBattleParticipant({
+    id: uuid(),
+    battleId: input.battleId,
+    userId: input.inviteeUserId,
+    role: input.role,
+    status: PENDING_PARTICIPANT_STATUS,
+    acceptedAt: null,
+  });
+
+  return toBattleParticipantRecord(created);
 };
 
 export const startBattle = async (id: string): Promise<BattleRecord> => {

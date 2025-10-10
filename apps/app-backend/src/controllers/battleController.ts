@@ -15,7 +15,7 @@ const startModeSchema = z.enum(['manual', 'scheduled']);
 
 const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled', 'lobby']);
 
-const participantRoleSchema = z.enum(['host', 'player', 'spectator']);
+const participantRoleSchema = z.enum(['owner', 'admin', 'editor', 'player']);
 
 const battleIdParamSchema = z.object({
   battleId: z.string().min(1, 'battleId is required'),
@@ -102,6 +102,10 @@ export const getBattleHandler = async (req: Request<{ battleId: string }>, res: 
 
 export const createBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
     const payload = createBattleSchema.parse(req.body);
     const startDate = parseStartDate(payload.scheduledStartAt ?? undefined);
 
@@ -111,6 +115,7 @@ export const createBattleHandler = async (req: Request, res: Response, next: Nex
       configuration: payload.configuration,
       startMode: payload.startMode as BattleStartMode,
       scheduledStartAt: startDate ?? null,
+      createdByUserId: req.user.id,
     });
 
     res.status(201).json({ battle });

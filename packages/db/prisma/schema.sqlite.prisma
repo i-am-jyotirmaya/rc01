@@ -8,23 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum BattleStatus {
-  draft
-  configuring
-  lobby
-  scheduled
-  ready
-  active
-  completed
-  cancelled
-}
-
-enum BattleParticipantRole {
-  host
-  player
-  spectator
-}
-
 model User {
   id           String   @id
   username     String   @unique
@@ -42,16 +25,16 @@ model User {
 }
 
 model Battle {
-  id               String             @id
+  id               String            @id
   name             String
-  shortDescription String?            @map("short_description")
-  status           BattleStatus
-  configuration    Json               @db.Json
-  autoStart        Boolean            @map("auto_start")
-  scheduledStartAt DateTime?          @map("scheduled_start_at")
-  startedAt        DateTime?          @map("started_at")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  shortDescription String?           @map("short_description")
+  status           String            @default("draft")
+  configuration    String            @map("configuration")
+  autoStart        Boolean           @map("auto_start")
+  scheduledStartAt DateTime?         @map("scheduled_start_at")
+  startedAt        DateTime?         @map("started_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
   participants     BattleParticipant[]
 
   @@map("battles")
@@ -60,13 +43,15 @@ model Battle {
 }
 
 model BattleParticipant {
-  id        String                 @id
-  battleId  String                 @map("battle_id")
-  userId    String                 @map("user_id")
-  role      BattleParticipantRole
-  createdAt DateTime               @default(now()) @map("created_at")
-  battle    Battle                 @relation(fields: [battleId], references: [id], onDelete: Cascade)
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id
+  battleId   String   @map("battle_id")
+  userId     String   @map("user_id")
+  role       String   @map("role")
+  status     String   @default("pending") @map("status")
+  acceptedAt DateTime? @map("accepted_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  battle     Battle   @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("battle_participants")
   @@unique([battleId, userId])

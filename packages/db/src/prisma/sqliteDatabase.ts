@@ -1,12 +1,13 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/sqlite/index.js";
 import type { DatabaseClient, DatabaseKind } from "../databaseClient.js";
 import {
   mapBattle,
   mapBattleParticipant,
   mapUser,
-  toBattleCreateData,
   toBattleParticipantCreateData,
-  toBattleUpdateData,
+  toBattleParticipantUpdateData,
+  toSqliteBattleCreateData,
+  toSqliteBattleUpdateData,
   toUserCreateData,
 } from "./mappers.js";
 import type {
@@ -17,6 +18,7 @@ import type {
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from "../types.js";
 
@@ -65,7 +67,7 @@ export class PrismaSqliteDatabase implements DatabaseClient {
   public readonly battles = {
     insert: async (payload: CreateBattlePayload): Promise<DbBattleRow> => {
       const created = await this.prisma.battle.create({
-        data: toBattleCreateData(payload),
+        data: toSqliteBattleCreateData(payload),
       });
       return mapBattle(created);
     },
@@ -98,7 +100,7 @@ export class PrismaSqliteDatabase implements DatabaseClient {
       id: string,
       payload: UpdateBattlePayload,
     ): Promise<DbBattleRow | null> => {
-      const data = toBattleUpdateData(payload);
+      const data = toSqliteBattleUpdateData(payload);
       if (Object.keys(data).length === 0) {
         const existing = await this.prisma.battle.findUnique({ where: { id } });
         return existing ? mapBattle(existing) : null;
@@ -166,6 +168,17 @@ export class PrismaSqliteDatabase implements DatabaseClient {
       });
       return participants.map(mapBattleParticipant);
     },
+
+    updateById: async (
+      id: string,
+      payload: UpdateBattleParticipantPayload,
+    ): Promise<DbBattleParticipantRow> => {
+      const updated = await this.prisma.battleParticipant.update({
+        where: { id },
+        data: toBattleParticipantUpdateData(payload),
+      });
+      return mapBattleParticipant(updated);
+    },
   };
 
   public async runMigrations(): Promise<void> {
@@ -232,14 +245,17 @@ export class PrismaSqliteDatabase implements DatabaseClient {
           battle_id TEXT NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
           user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           role TEXT NOT NULL DEFAULT 'player',
+          status TEXT NOT NULL DEFAULT 'pending',
+          accepted_at DATETIME,
           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CHECK (role IN ('host', 'player', 'spectator')),
+          CHECK (role IN ('owner', 'admin', 'editor', 'player')),
+          CHECK (status IN ('pending', 'accepted')),
           UNIQUE (battle_id, user_id)
         );
       `);
 
       await tx.$executeRawUnsafe(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_host ON battle_participants (battle_id) WHERE role = 'host';",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
       );
     });
   }

@@ -1,11 +1,13 @@
 import type {
   BattleParticipantRole,
+  BattleParticipantStatus,
   CreateBattleParticipantPayload,
   CreateBattlePayload,
   CreateUserPayload,
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from '../types.js';
 
@@ -37,8 +39,35 @@ export type PrismaBattleParticipantRecord = {
   id: string;
   battleId: string;
   userId: string;
-  role: BattleParticipantRole;
+  role: string;
+  status: string;
   createdAt: Date;
+  acceptedAt: Date | null;
+};
+
+const parseBattleConfiguration = (value: unknown): Record<string, unknown> => {
+  if (value === null || value === undefined) {
+    return {};
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch (error) {
+      // fall through to return empty object when parsing fails
+    }
+
+    return {};
+  }
+
+  if (typeof value === 'object') {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
 };
 
 export const mapUser = (user: PrismaUserRecord): DbUserRow => ({
@@ -57,7 +86,7 @@ export const mapBattle = (battle: PrismaBattleRecord): DbBattleRow => ({
   name: battle.name,
   short_description: battle.shortDescription,
   status: battle.status,
-  configuration: (battle.configuration ?? {}) as Record<string, unknown>,
+  configuration: parseBattleConfiguration(battle.configuration),
   auto_start: battle.autoStart,
   scheduled_start_at: battle.scheduledStartAt,
   started_at: battle.startedAt,
@@ -71,8 +100,10 @@ export const mapBattleParticipant = (
   id: participant.id,
   battle_id: participant.battleId,
   user_id: participant.userId,
-  role: participant.role,
+  role: participant.role as BattleParticipantRole,
+  status: participant.status as BattleParticipantStatus,
   created_at: participant.createdAt,
+  accepted_at: participant.acceptedAt ?? null,
 });
 
 export const toUserCreateData = (payload: CreateUserPayload) => ({
@@ -94,6 +125,11 @@ export const toBattleCreateData = (payload: CreateBattlePayload) => ({
   autoStart: payload.autoStart,
   scheduledStartAt: payload.scheduledStartAt ?? null,
   startedAt: payload.startedAt ?? null,
+});
+
+export const toSqliteBattleCreateData = (payload: CreateBattlePayload) => ({
+  ...toBattleCreateData(payload),
+  configuration: JSON.stringify(payload.configuration ?? {}),
 });
 
 export const toBattleUpdateData = (payload: UpdateBattlePayload) => {
@@ -130,6 +166,16 @@ export const toBattleUpdateData = (payload: UpdateBattlePayload) => {
   return data;
 };
 
+export const toSqliteBattleUpdateData = (payload: UpdateBattlePayload) => {
+  const data = toBattleUpdateData(payload);
+
+  if (payload.configuration !== undefined) {
+    data.configuration = JSON.stringify(payload.configuration ?? {});
+  }
+
+  return data;
+};
+
 export const toBattleParticipantCreateData = (
   payload: CreateBattleParticipantPayload,
 ) => ({
@@ -137,4 +183,24 @@ export const toBattleParticipantCreateData = (
   battleId: payload.battleId,
   userId: payload.userId,
   role: payload.role,
+  status: payload.status ?? 'pending',
+  acceptedAt: payload.acceptedAt ?? null,
 });
+
+export const toBattleParticipantUpdateData = (payload: UpdateBattleParticipantPayload) => {
+  const data: Record<string, unknown> = {};
+
+  if (payload.role !== undefined) {
+    data.role = payload.role;
+  }
+
+  if (payload.status !== undefined) {
+    data.status = payload.status;
+  }
+
+  if (payload.acceptedAt !== undefined) {
+    data.acceptedAt = payload.acceptedAt;
+  }
+
+  return data;
+};

@@ -10,7 +10,8 @@
     "dev": "tsx watch --tsconfig tsconfig.json src/index.ts",
     "build": "tsc -b tsconfig.build.json",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@rc01/problem-template": "workspace:*",

@@ -1,110 +1,45 @@
-import { Button, ConfigProvider, Divider, Empty, Form, Layout, Space, Table, Tag, Typography, message, theme } from "antd";
+import {
+  Button,
+  ConfigProvider,
+  Divider,
+  Empty,
+  Form,
+  Layout,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  message,
+  theme,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import type { CSSProperties, FC } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type {
-  BattleRecord,
-  BattleStatus,
-  CreateBattleRequestPayload,
-  UpdateBattleRequestPayload,
-} from "@rc01/api-client";
+import { useCallback, useEffect, useMemo } from "react";
+import type { BattleRecord, BattleStatus } from "@rc01/api-client";
 import { Link, useNavigate } from "react-router-dom";
 import { HostBattleForm } from "../components/GetStarted/HostBattleForm";
-import type { HostBattleFormValues, StartMode } from "../components/GetStarted/HostBattleForm";
-import { battleApi } from "../services/api";
+import type { HostBattleFormValues } from "../components/GetStarted/HostBattleForm";
 import { useThemeMode } from "../providers/theme-mode-context";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  clearError,
+  createBattle,
+  fetchBattles,
+  setShowAdvancedOptions,
+  startBattle,
+} from "../features/hostBattle/hostBattleSlice";
+import {
+  selectBattles,
+  selectCreatePending,
+  selectHostBattleError,
+  selectHostBattleLoading,
+  selectShowAdvancedOptions,
+  selectStartingBattleId,
+} from "../features/hostBattle/selectors";
+import { formatDateTime, isConfigurableStatus, statusMeta } from "../features/hostBattle/utils";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
-
-const configurableStatuses: BattleStatus[] = ["draft", "configuring", "ready", "scheduled"];
-
-const statusMeta: Record<BattleStatus, { label: string; color: string }> = {
-  draft: { label: "Draft", color: "default" },
-  configuring: { label: "Configuring", color: "gold" },
-  ready: { label: "Ready", color: "green" },
-  scheduled: { label: "Scheduled", color: "blue" },
-  lobby: { label: "Lobby", color: "cyan" },
-  active: { label: "Active", color: "purple" },
-  completed: { label: "Completed", color: "default" },
-  cancelled: { label: "Cancelled", color: "red" },
-};
-
-const formatDateTime = (value?: string | null) =>
-  value ? dayjs(value).format("MMM D, YYYY h:mm A") : "—";
-
-const createErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
-
-const extractBattles = (response: unknown): BattleRecord[] => {
-  const candidate = (response as { battles?: unknown }).battles;
-  return Array.isArray(candidate) ? (candidate as BattleRecord[]) : [];
-};
-
-const extractBattle = (response: unknown): BattleRecord | undefined => {
-  const candidate = (response as { battle?: unknown }).battle;
-  if (candidate && typeof candidate === "object") {
-    return candidate as BattleRecord;
-  }
-  return undefined;
-};
-
-const buildBattlePayload = (
-  values: HostBattleFormValues,
-): {
-  create: CreateBattleRequestPayload;
-  update: UpdateBattleRequestPayload;
-  configuration: Record<string, unknown>;
-} => {
-  const startMode = (values.startMode ?? "manual") as StartMode;
-  const sanitizedName = values.battleName.trim();
-  const shortDescription = values.shortDescription?.trim() ?? "";
-  const scheduledStartAt =
-    startMode === "scheduled"
-      ? values.scheduledStartAt
-        ? values.scheduledStartAt.toISOString()
-        : null
-      : null;
-
-  const configurationInput = {
-    ...values,
-    battleName: sanitizedName,
-    shortDescription: shortDescription || undefined,
-    startMode,
-    scheduledStartAt,
-  };
-
-  const configuration = JSON.parse(JSON.stringify(configurationInput)) as Record<string, unknown>;
-
-  if (!shortDescription) {
-    delete configuration.shortDescription;
-  }
-
-  if (startMode !== "scheduled") {
-    configuration.scheduledStartAt = null;
-  }
-
-  const createPayload: CreateBattleRequestPayload = {
-    name: sanitizedName,
-    shortDescription: shortDescription ? shortDescription : null,
-    configuration,
-    startMode,
-    scheduledStartAt,
-  };
-
-  const updatePayload: UpdateBattleRequestPayload = {
-    name: sanitizedName,
-    shortDescription: shortDescription ? shortDescription : null,
-    configuration,
-    startMode,
-    scheduledStartAt,
-  };
-
-  return { create: createPayload, update: updatePayload, configuration };
-};
-
-const isConfigurableStatus = (status: BattleStatus) => configurableStatuses.includes(status);
 
 interface HostBattlePalette {
   backgroundGradients: string[];
@@ -151,11 +86,13 @@ interface HostBattlePalette {
 
 export const HostBattlePage: FC = () => {
   const [form] = Form.useForm<HostBattleFormValues>();
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  const [battles, setBattles] = useState<BattleRecord[]>([]);
-  const [loadingBattles, setLoadingBattles] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [startingBattleId, setStartingBattleId] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const battles = useAppSelector(selectBattles);
+  const loadingBattles = useAppSelector(selectHostBattleLoading);
+  const isCreating = useAppSelector(selectCreatePending);
+  const showAdvancedOptions = useAppSelector(selectShowAdvancedOptions);
+  const startingBattleId = useAppSelector(selectStartingBattleId);
+  const error = useAppSelector(selectHostBattleError);
   const { token } = theme.useToken();
   const { mode } = useThemeMode();
   const navigate = useNavigate();
@@ -532,53 +469,30 @@ export const HostBattlePage: FC = () => {
     [accentColor, palette],
   );
 
-  const loadBattles = useCallback(async () => {
-    setLoadingBattles(true);
-    try {
-      const response = await battleApi.listBattles();
-      setBattles(extractBattles(response));
-    } catch (error) {
-      message.error(createErrorMessage(error, "Unable to load battles."));
-    } finally {
-      setLoadingBattles(false);
-    }
-  }, []);
-
   const handleSubmit = useCallback(
     async (values: HostBattleFormValues) => {
-      setIsCreating(true);
       try {
-        const { create } = buildBattlePayload(values);
-        const response = await battleApi.createBattle(create);
-        const createdBattle = extractBattle(response);
-        message.success(`Battle "${createdBattle?.name ?? values.battleName.trim()}" saved`);
+        const createdBattle = await dispatch(createBattle(values)).unwrap();
+        message.success(`Battle "${createdBattle.name ?? values.battleName.trim()}" saved`);
         form.resetFields();
-        setShowAdvancedOptions(false);
-        await loadBattles();
-      } catch (error) {
-        message.error(createErrorMessage(error, "Failed to create battle."));
-      } finally {
-        setIsCreating(false);
+        dispatch(setShowAdvancedOptions(false));
+      } catch {
+        // Error messaging handled via global host battle error state.
       }
     },
-    [form, loadBattles],
+    [dispatch, form],
   );
 
   const handleStartBattle = useCallback(
     async (battle: BattleRecord) => {
-      setStartingBattleId(battle.id);
       try {
-        const response = await battleApi.startBattle(battle.id);
-        const updatedBattle = extractBattle(response) ?? battle;
-        message.success(`Battle "${updatedBattle.name}" launched`);
-        await loadBattles();
-      } catch (error) {
-        message.error(createErrorMessage(error, "Failed to start battle."));
-      } finally {
-        setStartingBattleId(null);
+        const updatedBattle = await dispatch(startBattle(battle.id)).unwrap();
+        message.success(`Battle "${updatedBattle.name ?? battle.name}" launched`);
+      } catch {
+        // Error messaging handled via global host battle error state.
       }
     },
-    [loadBattles],
+    [dispatch],
   );
 
   const handleNavigateToConfig = useCallback(
@@ -589,8 +503,27 @@ export const HostBattlePage: FC = () => {
   );
 
   useEffect(() => {
-    void loadBattles();
-  }, [loadBattles]);
+    void dispatch(fetchBattles());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+      dispatch(clearError());
+    }
+  }, [dispatch, error]);
+
+  const handleToggleAdvanced = useCallback(
+    (checked: boolean) => {
+      dispatch(setShowAdvancedOptions(checked));
+    },
+    [dispatch],
+  );
+
+  const handleResetForm = useCallback(() => {
+    form.resetFields();
+    dispatch(setShowAdvancedOptions(false));
+  }, [dispatch, form]);
 
   const columns = useMemo<ColumnsType<BattleRecord>>(
     () => [
@@ -725,9 +658,10 @@ export const HostBattlePage: FC = () => {
               <HostBattleForm
                 form={form}
                 showAdvanced={showAdvancedOptions}
-                onToggleAdvanced={setShowAdvancedOptions}
+                onToggleAdvanced={handleToggleAdvanced}
                 onSubmit={handleSubmit}
                 submitButtonLoading={isCreating}
+                onReset={handleResetForm}
               />
             </div>
           </ConfigProvider>

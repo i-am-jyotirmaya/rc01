@@ -17,7 +17,8 @@
     "docker:down": "docker compose -f apps/app-backend/docker-compose.yml down",
     "docker:logs": "docker compose -f apps/app-backend/docker-compose.yml logs -f",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@rc01/db": "workspace:^",
@@ -45,7 +46,6 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.2",
-    "pg-mem": "^3.0.5",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.6",
     "vitest": "^2.1.4"

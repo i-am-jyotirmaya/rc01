@@ -111,7 +111,7 @@ export const AdminBattleConfigPage: FC = () => {
               <Alert
                 type="error"
                 message="Failed to save draft"
-                description={persistError.message}
+                description={persistError}
                 showIcon
               />
             ) : null}

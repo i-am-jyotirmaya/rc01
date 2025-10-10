@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/sqlite"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum BattleStatus {
+  draft
+  configuring
+  lobby
+  scheduled
+  ready
+  active
+  completed
+  cancelled
+}
+
+enum BattleParticipantRole {
+  host
+  player
+  spectator
+}
+
+model User {
+  id           String   @id
+  username     String   @unique
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  passwordHash String   @map("password_hash")
+  photoPath    String?  @map("photo_path")
+  createdAt    DateTime @default(now()) @map("created_at")
+  participants BattleParticipant[]
+
+  @@map("users")
+  @@index([username], map: "idx_users_username")
+}
+
+model Battle {
+  id               String             @id
+  name             String
+  shortDescription String?            @map("short_description")
+  status           BattleStatus
+  configuration    Json               @db.Json
+  autoStart        Boolean            @map("auto_start")
+  scheduledStartAt DateTime?          @map("scheduled_start_at")
+  startedAt        DateTime?          @map("started_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  participants     BattleParticipant[]
+
+  @@map("battles")
+  @@index([status], map: "idx_battles_status")
+  @@index([scheduledStartAt], map: "idx_battles_scheduled_start")
+}
+
+model BattleParticipant {
+  id        String                 @id
+  battleId  String                 @map("battle_id")
+  userId    String                 @map("user_id")
+  role      BattleParticipantRole
+  createdAt DateTime               @default(now()) @map("created_at")
+  battle    Battle                 @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("battle_participants")
+  @@unique([battleId, userId])
+  @@index([battleId], map: "idx_battle_participants_battle_id")
+}

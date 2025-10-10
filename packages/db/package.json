@@ -4,16 +4,26 @@
   "description": "Database utilities for CodeBattle Arena backend",
   "type": "module",
   "dependencies": {
-    "pg": "^8.13.1"
+    "@prisma/client": "^5.21.1"
   },
   "devDependencies": {
-    "typescript": "~5.8.3",
-    "@types/pg": "^8.11.10"
+    "@types/node": "^20.17.12",
+    "prisma": "^5.21.1",
+    "typescript": "~5.8.3"
   },
-  "main": "./dist/index.js",
-  "exports": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc -b tsconfig.json"
+    "build": "echo 'no build step required'",
+    "check-types": "tsc --noEmit",
+    "prisma:generate": "pnpm run prisma:generate:postgres && pnpm run prisma:generate:sqlite",
+    "prisma:generate:postgres": "prisma generate --schema=prisma/schema.postgres.prisma",
+    "prisma:generate:sqlite": "prisma generate --schema=prisma/schema.sqlite.prisma"
   }
 }

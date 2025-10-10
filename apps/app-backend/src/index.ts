@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { initDb, runCoreMigrations } from '@rc01/db';
 import { env } from './config/env.js';
 import { app } from './app.js';
@@ -5,17 +6,32 @@ import { ensureDirectory } from './utils/filesystem.js';
 import { logger } from './utils/logger.js';
 import { initializeBattleScheduling } from './services/battleService.js';
 
+const parseBoolean = (value: string | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
+
+const buildPostgresUrl = (): string => {
+  const password = encodeURIComponent(env.database.password);
+  return `postgresql://${env.database.user}:${password}@${env.database.host}:${env.database.port}/${env.database.name}`;
+};
+
 const startServer = async (): Promise<void> => {
   try {
     await ensureDirectory(env.storageDir);
     await ensureDirectory(env.uploadsDir);
 
+    const usePostgres = parseBoolean(process.env.USE_POSTGRES);
+    const sqlitePath = path.join(env.storageDir, 'codebattle.sqlite');
+    const databaseUrl = usePostgres ? buildPostgresUrl() : `file:${sqlitePath}`;
+
     initDb({
-      host: env.database.host,
-      port: env.database.port,
-      user: env.database.user,
-      password: env.database.password,
-      database: env.database.name,
+      usePostgres,
+      databaseUrl,
     });
 
     await runCoreMigrations();

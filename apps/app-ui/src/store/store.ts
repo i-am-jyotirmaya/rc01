@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { battleConfigReducer } from "../features/battleConfig/battleConfigSlice";
 import { arenaReducer } from "../features/arena/arenaSlice";
 import { authReducer } from "../features/auth/authSlice";
 import { hostBattleReducer } from "../features/hostBattle/hostBattleSlice";
@@ -10,6 +11,7 @@ export const store = configureStore({
     auth: authReducer,
     hostBattle: hostBattleReducer,
     problems: problemsReducer,
+    battleConfig: battleConfigReducer,
   },
 });
 

@@ -1,12 +1,12 @@
-import http from 'node:http';
-import path from 'node:path';
-import { initDb, runCoreMigrations } from '@rc01/db';
-import { env } from './config/env.js';
-import { app } from './app.js';
-import { ensureDirectory } from './utils/filesystem.js';
-import { logger } from './utils/logger.js';
-import { initializeBattleScheduling } from './services/battleService.js';
-import { initializeBattleRealtime } from './realtime/socketServer.js';
+import http from "node:http";
+import path from "node:path";
+import { initDb, runCoreMigrations } from "@rc01/db";
+import { env } from "./config/env.js";
+import { app } from "./app.js";
+import { ensureDirectory } from "./utils/filesystem.js";
+import { logger } from "./utils/logger.js";
+import { initializeBattleScheduling } from "./services/battleService.js";
+import { initializeBattleRealtime } from "./realtime/socketServer.js";
 
 const parseBoolean = (value: string | undefined): boolean => {
   if (!value) {
@@ -14,7 +14,7 @@ const parseBoolean = (value: string | undefined): boolean => {
   }
 
   const normalized = value.trim().toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(normalized);
+  return ["1", "true", "yes", "on"].includes(normalized);
 };
 
 const buildPostgresUrl = (): string => {
@@ -28,7 +28,8 @@ const startServer = async (): Promise<void> => {
     await ensureDirectory(env.uploadsDir);
 
     const usePostgres = parseBoolean(process.env.USE_POSTGRES);
-    const sqlitePath = path.join(env.storageDir, 'codebattle.sqlite');
+    const absoluteStoragePath = path.resolve(env.storageDir);
+    const sqlitePath = path.join(absoluteStoragePath, "codebattle.sqlite");
     const databaseUrl = usePostgres ? buildPostgresUrl() : `file:${sqlitePath}`;
 
     initDb({
@@ -46,7 +47,7 @@ const startServer = async (): Promise<void> => {
       logger.info(`Backend listening on port ${env.port}`);
     });
   } catch (error) {
-    logger.error('Failed to start backend', error);
+    logger.error("Failed to start backend", error);
     process.exit(1);
   }
 };

@@ -584,24 +584,36 @@ export const HostBattlePage: FC = () => {
         key: "actions",
         align: "right" as const,
         render: (_: unknown, record) => {
-          const canStart = record.status === "ready" || record.status === "scheduled";
+          const viewerPermissions = new Set(record.viewerPermissions ?? []);
+          const hasConfigurePermission = viewerPermissions.has("battle.configure");
+          const hasStartPermission = viewerPermissions.has("battle.start");
+          const statusAllowsStart = record.status === "ready" || record.status === "scheduled";
+
+          if (!hasConfigurePermission && !hasStartPermission) {
+            return null;
+          }
+
           return (
             <Space size="small">
-              <Button
-                type="link"
-                onClick={() => handleNavigateToConfig(record.id)}
-                disabled={!isConfigurableStatus(record.status)}
-              >
-                Configure
-              </Button>
-              <Button
-                type="link"
-                onClick={() => handleStartBattle(record)}
-                disabled={!canStart}
-                loading={startingBattleId === record.id}
-              >
-                Start now
-              </Button>
+              {hasConfigurePermission ? (
+                <Button
+                  type="link"
+                  onClick={() => handleNavigateToConfig(record.id)}
+                  disabled={!isConfigurableStatus(record.status)}
+                >
+                  Configure
+                </Button>
+              ) : null}
+              {hasStartPermission ? (
+                <Button
+                  type="link"
+                  onClick={() => handleStartBattle(record)}
+                  disabled={!statusAllowsStart}
+                  loading={startingBattleId === record.id}
+                >
+                  Start now
+                </Button>
+              ) : null}
             </Space>
           );
         },

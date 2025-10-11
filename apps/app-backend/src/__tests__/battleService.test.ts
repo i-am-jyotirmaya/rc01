@@ -15,6 +15,7 @@ import {
   revokeBattleInvite,
   listBattleParticipants,
   type BattleRecord,
+  type UpdateBattleInput,
 } from '../services/battleService.js';
 import { setupTestDatabase, teardownTestDatabase } from './helpers/db.js';
 
@@ -34,6 +35,16 @@ const createUser = async (overrides: Partial<{ username: string }> = {}) => {
   });
 
   return { id, username };
+};
+
+type UpdateBattleFields = Omit<UpdateBattleInput, 'actingUserId'>;
+
+const updateBattleAs = (userId: string, battleId: string, payload: UpdateBattleFields) => {
+  return updateBattle(battleId, { ...payload, actingUserId: userId });
+};
+
+const startBattleAs = (userId: string, battleId: string) => {
+  return startBattle({ battleId, actingUserId: userId });
 };
 
 describe('battleService lobby state', () => {
@@ -61,16 +72,18 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    const ready = await updateBattle(created.id, { status: 'ready' });
+    const ready = await updateBattleAs(owner.id, created.id, { status: 'ready' });
     expect(ready.status).toBe('ready');
 
-    const lobby = await updateBattle(created.id, { status: 'lobby' });
+    const lobby = await updateBattleAs(owner.id, created.id, { status: 'lobby' });
     expect(lobby.status).toBe('lobby');
 
     expect(lobbyOpened).toHaveLength(1);
     expect(lobbyOpened[0].id).toBe(created.id);
 
-    await expect(updateBattle(created.id, { name: 'New Name' })).rejects.toMatchObject({ status: 409 });
+    await expect(updateBattleAs(owner.id, created.id, { name: 'New Name' })).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('enforces join guards for players while supporting administrative role invitations', async () => {
@@ -91,7 +104,7 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
 
     const ownerPresence = await joinBattle({ battleId: created.id, userId: owner.id });
     expect(ownerPresence.wasCreated).toBe(false);
@@ -115,7 +128,7 @@ describe('battleService lobby state', () => {
 
     await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 409 });
 
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     const playerJoin = await joinBattle({ battleId: created.id, userId: player.id });
     expect(playerJoin.wasCreated).toBe(true);
@@ -137,10 +150,10 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
-    const active = await startBattle(created.id);
+    const active = await startBattleAs(owner.id, created.id);
     expect(active.status).toBe('active');
   });
 
@@ -156,8 +169,8 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await expect(joinBattle({ battleId: created.id, userId: spectator.id })).rejects.toMatchObject({ status: 403 });
 
@@ -192,8 +205,8 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await inviteBattleParticipant({
       battleId: created.id,
@@ -238,8 +251,8 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await joinBattle({ battleId: created.id, userId: owner.id });
     await joinBattle({ battleId: created.id, userId: participant.id });
@@ -284,10 +297,10 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
     await joinBattle({ battleId: created.id, userId: owner.id });
 
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
     await joinBattle({ battleId: created.id, userId: player.id });
 
     await expect(createBattleInvite({ battleId: created.id, userId: player.id })).rejects.toMatchObject({
@@ -306,7 +319,7 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
 
     await joinBattle({ battleId: created.id, userId: owner.id });
 
@@ -344,13 +357,13 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await joinBattle({ battleId: created.id, userId: owner.id });
     await joinBattle({ battleId: created.id, userId: player.id });
 
-    await startBattle(created.id);
+    await startBattleAs(owner.id, created.id);
     await leaveBattle(created.id, player.id);
 
     await expect(joinBattle({ battleId: created.id, userId: player.id })).rejects.toMatchObject({ status: 403 });
@@ -367,8 +380,8 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await joinBattle({ battleId: created.id, userId: owner.id });
     await joinBattle({ battleId: created.id, userId: player.id, password: 'join-pass' });
@@ -394,8 +407,8 @@ describe('battleService lobby state', () => {
       createdByUserId: owner.id,
     });
 
-    await updateBattle(created.id, { status: 'ready' });
-    await updateBattle(created.id, { status: 'lobby' });
+    await updateBattleAs(owner.id, created.id, { status: 'ready' });
+    await updateBattleAs(owner.id, created.id, { status: 'lobby' });
 
     await joinBattle({ battleId: created.id, userId: owner.id });
     await joinBattle({ battleId: created.id, userId: member.id });

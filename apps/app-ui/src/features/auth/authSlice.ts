@@ -10,7 +10,7 @@ import type {
   RegisterRequestPayload,
 } from "@rc01/api-client";
 import { ApiError } from "@rc01/api-client";
-import { authApi } from "../../services/api";
+import { authApi, setApiAuthToken } from "../../services/api";
 
 export type AuthUiMode = "login" | "register";
 
@@ -108,6 +108,8 @@ const initialState: AuthState = {
   token: persistedAuth?.token ?? null,
 };
 
+setApiAuthToken(initialState.token);
+
 export const submitLogin = createAsyncThunk<
   AuthResponsePayload,
   LoginFormValues,
@@ -174,6 +176,7 @@ const authSlice = createSlice({
       state.status = "idle";
       state.error = null;
       persistAuth(null);
+      setApiAuthToken(null);
     },
   },
   extraReducers: (builder) => {
@@ -188,6 +191,7 @@ const authSlice = createSlice({
         state.error = null;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        setApiAuthToken(action.payload.token);
       })
       .addCase(submitLogin.rejected, (state, action) => {
         state.status = "failed";
@@ -203,6 +207,7 @@ const authSlice = createSlice({
         state.error = null;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        setApiAuthToken(action.payload.token);
       })
       .addCase(submitRegistration.rejected, (state, action) => {
         state.status = "failed";

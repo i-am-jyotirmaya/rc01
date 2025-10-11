@@ -15,14 +15,15 @@ import {
   updateBattleHandler,
 } from '../controllers/battleController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { attachOptionalUser } from '../middleware/optionalAuth.js';
 
 export const battleRouter: Router = Router();
 
-battleRouter.get('/', listBattlesHandler);
-battleRouter.get('/:battleId', getBattleHandler);
+battleRouter.get('/', attachOptionalUser, listBattlesHandler);
+battleRouter.get('/:battleId', attachOptionalUser, getBattleHandler);
 battleRouter.post('/', requireAuth, createBattleHandler);
-battleRouter.patch('/:battleId', updateBattleHandler);
-battleRouter.post('/:battleId/start', startBattleHandler);
+battleRouter.patch('/:battleId', requireAuth, updateBattleHandler);
+battleRouter.post('/:battleId/start', requireAuth, startBattleHandler);
 battleRouter.post('/:battleId/join', requireAuth, joinBattleHandler);
 battleRouter.get('/:battleId/participants', requireAuth, listBattleParticipantsHandler);
 battleRouter.post('/:battleId/leave', requireAuth, leaveBattleHandler);

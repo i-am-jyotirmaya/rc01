@@ -15,7 +15,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/uploads', express.static(env.uploadsDir, { extensions: ['jpg', 'jpeg', 'png'] }));
+app.use(
+  '/uploads',
+  express.static(env.uploadsDir, {
+    extensions: ['jpg', 'jpeg', 'png'],
+    setHeaders(res) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
+  }),
+);
 app.use('/api/auth', authRouter);
 app.use('/api/battles', battleRouter);
 app.use('/api/problems', problemRouter);

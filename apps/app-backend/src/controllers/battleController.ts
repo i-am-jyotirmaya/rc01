@@ -209,8 +209,12 @@ export const listBattleParticipantsHandler = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
     const { battleId } = battleIdParamSchema.parse(req.params);
-    const participants = await listBattleParticipants(battleId);
+    const participants = await listBattleParticipants(battleId, req.user.id);
     res.json({ participants });
   } catch (error) {
     next(error);

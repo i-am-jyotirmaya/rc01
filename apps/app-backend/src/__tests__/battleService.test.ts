@@ -13,6 +13,7 @@ import {
   createBattleInvite,
   listBattleInvites,
   revokeBattleInvite,
+  listBattleParticipants,
   type BattleRecord,
 } from '../services/battleService.js';
 import { setupTestDatabase, teardownTestDatabase } from './helpers/db.js';
@@ -379,5 +380,29 @@ describe('battleService lobby state', () => {
     const rejoins = await joinBattle({ battleId: created.id, userId: player.id, password: 'join-pass' });
     expect(rejoins.wasCreated).toBe(false);
     expect(rejoins.participant.status).toBe('accepted');
+  });
+
+  it('requires membership before listing battle participants', async () => {
+    const owner = await createUser({ username: 'participants-owner' });
+    const member = await createUser({ username: 'participants-member' });
+    const outsider = await createUser({ username: 'participants-outsider' });
+
+    const created = await createBattle({
+      name: 'Participant Listing Battle',
+      startMode: 'manual',
+      configuration: {},
+      createdByUserId: owner.id,
+    });
+
+    await updateBattle(created.id, { status: 'ready' });
+    await updateBattle(created.id, { status: 'lobby' });
+
+    await joinBattle({ battleId: created.id, userId: owner.id });
+    await joinBattle({ battleId: created.id, userId: member.id });
+
+    const participants = await listBattleParticipants(created.id, owner.id);
+    expect(participants.map((p) => p.userId)).toEqual(expect.arrayContaining([owner.id, member.id]));
+
+    await expect(listBattleParticipants(created.id, outsider.id)).rejects.toMatchObject({ status: 403 });
   });
 });

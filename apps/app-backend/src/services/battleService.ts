@@ -616,7 +616,22 @@ export const getBattleById = async (id: string): Promise<BattleRecord> => {
   return toBattleRecord(row);
 };
 
-export const listBattleParticipants = async (battleId: string): Promise<BattleParticipantRecord[]> => {
+export const listBattleParticipants = async (
+  battleId: string,
+  userId: string,
+): Promise<BattleParticipantRecord[]> => {
+  const battle = await findBattleById(battleId);
+  if (!battle) {
+    throw createHttpError(404, 'Battle not found');
+  }
+
+  await requireAcceptedParticipant(
+    battleId,
+    userId,
+    403,
+    'You must join the battle before viewing participants',
+  );
+
   const participants = await listBattleParticipantsByBattle(battleId);
   return participants.map(toBattleParticipantRecord);
 };

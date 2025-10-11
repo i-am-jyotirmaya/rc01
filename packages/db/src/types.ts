@@ -63,9 +63,9 @@ export type UpdateBattlePayload = Partial<{
   startedAt: Date | null;
 }>;
 
-export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'player';
+export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'user';
 
-export type BattleParticipantStatus = 'pending' | 'accepted';
+export type BattleParticipantStatus = 'pending' | 'accepted' | 'left';
 
 export type DbBattleParticipantRow = {
   id: string;
@@ -73,8 +73,10 @@ export type DbBattleParticipantRow = {
   user_id: string;
   role: BattleParticipantRole;
   status: BattleParticipantStatus;
+  is_contestant: boolean;
   created_at: Date;
   accepted_at: Date | null;
+  left_at: Date | null;
 };
 
 export type CreateBattleParticipantPayload = {
@@ -84,12 +86,37 @@ export type CreateBattleParticipantPayload = {
   role: BattleParticipantRole;
   status?: BattleParticipantStatus;
   acceptedAt?: Date | null;
+  isContestant?: boolean;
+  leftAt?: Date | null;
 };
 
 export type UpdateBattleParticipantPayload = Partial<{
   role: BattleParticipantRole;
   status: BattleParticipantStatus;
   acceptedAt: Date | null;
+  isContestant: boolean;
+  leftAt: Date | null;
+}>;
+
+export type DbBattleInviteRow = {
+  id: string;
+  battle_id: string;
+  token: string;
+  created_by_user_id: string;
+  created_at: Date;
+  revoked_at: Date | null;
+};
+
+export type CreateBattleInvitePayload = {
+  id: string;
+  battleId: string;
+  token: string;
+  createdByUserId: string;
+  revokedAt?: Date | null;
+};
+
+export type UpdateBattleInvitePayload = Partial<{
+  revokedAt: Date | null;
 }>;
 
 export type DatabaseInitOptions = {

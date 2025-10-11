@@ -23,12 +23,13 @@ enum BattleParticipantRole {
   owner
   admin
   editor
-  player
+  user
 }
 
 enum BattleParticipantStatus {
   pending
   accepted
+  left
 }
 
 model User {
@@ -41,6 +42,7 @@ model User {
   photoPath    String?  @map("photo_path")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   participants BattleParticipant[]
+  createdInvites BattleInvite[] @relation("UserInvites")
 
   @@map("users")
   @@index([username], map: "idx_users_username")
@@ -59,6 +61,7 @@ model Battle {
   createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
   participants     BattleParticipant[]
+  invites          BattleInvite[] @relation("BattleInvites")
 
   @@map("battles")
   @@index([status], map: "idx_battles_status")
@@ -66,17 +69,33 @@ model Battle {
 }
 
 model BattleParticipant {
-  id         String                   @id @db.Uuid
-  battleId   String                   @map("battle_id") @db.Uuid
-  userId     String                   @map("user_id") @db.Uuid
-  role       BattleParticipantRole
-  status     BattleParticipantStatus  @default(pending)
-  acceptedAt DateTime?                @map("accepted_at") @db.Timestamptz(6)
-  createdAt  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  battle     Battle                   @relation(fields: [battleId], references: [id], onDelete: Cascade)
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String                   @id @db.Uuid
+  battleId     String                   @map("battle_id") @db.Uuid
+  userId       String                   @map("user_id") @db.Uuid
+  role         BattleParticipantRole    @default(user)
+  status       BattleParticipantStatus  @default(pending)
+  isContestant Boolean                  @default(false) @map("is_contestant")
+  acceptedAt   DateTime?                @map("accepted_at") @db.Timestamptz(6)
+  leftAt       DateTime?                @map("left_at") @db.Timestamptz(6)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  battle       Battle                   @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("battle_participants")
   @@unique([battleId, userId])
   @@index([battleId], map: "idx_battle_participants_battle_id")
+}
+
+model BattleInvite {
+  id             String   @id @db.Uuid
+  battleId       String   @map("battle_id") @db.Uuid
+  token          String   @unique
+  createdByUserId String  @map("created_by_user_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+  battle         Battle   @relation("BattleInvites", fields: [battleId], references: [id], onDelete: Cascade)
+  creator        User     @relation("UserInvites", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@map("battle_invites")
+  @@index([battleId], map: "idx_battle_invites_battle_id")
 }

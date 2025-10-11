@@ -6,8 +6,15 @@ import {
   getBattleById,
   getBattles,
   joinBattle,
+  leaveBattle,
+  listBattleInvites,
+  listBattleParticipants,
   startBattle,
   updateBattle,
+  updateBattleContestants,
+  updateBattleParticipantRole,
+  createBattleInvite,
+  revokeBattleInvite,
   type BattleStartMode,
 } from '../services/battleService.js';
 
@@ -15,7 +22,7 @@ const startModeSchema = z.enum(['manual', 'scheduled']);
 
 const battleStatusSchema = z.enum(['draft', 'configuring', 'ready', 'scheduled', 'lobby']);
 
-const participantRoleSchema = z.enum(['owner', 'admin', 'editor', 'player']);
+const participantRoleSchema = z.enum(['owner', 'admin', 'editor', 'user']);
 
 const battleIdParamSchema = z.object({
   battleId: z.string().min(1, 'battleId is required'),
@@ -61,6 +68,27 @@ const updateBattleSchema = z
 const joinBattleSchema = z
   .object({
     role: participantRoleSchema.optional(),
+    password: z.string().min(1).optional(),
+    inviteToken: z.string().min(1).optional(),
+  })
+  .strict();
+
+const updateParticipantRoleSchema = z
+  .object({
+    targetUserId: z.string().min(1, 'targetUserId is required'),
+    role: z.enum(['admin', 'editor', 'user']),
+  })
+  .strict();
+
+const updateContestantsSchema = z
+  .object({
+    contestantUserIds: z.array(z.string().min(1)).max(100),
+  })
+  .strict();
+
+const revokeInviteSchema = z
+  .object({
+    inviteId: z.string().min(1, 'inviteId is required'),
   })
   .strict();
 
@@ -164,10 +192,153 @@ export const joinBattleHandler = async (req: Request, res: Response, next: NextF
       battleId: req.params.battleId,
       userId: req.user.id,
       role: payload.role,
+      password: payload.password,
+      inviteToken: payload.inviteToken,
     });
 
     const statusCode = result.wasCreated ? 201 : 200;
     res.status(statusCode).json({ participant: result.participant, wasCreated: result.wasCreated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listBattleParticipantsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const participants = await listBattleParticipants(battleId, req.user.id);
+    res.json({ participants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const leaveBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const participant = await leaveBattle(battleId, req.user.id);
+    res.json({ participant });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateParticipantRoleHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const payload = updateParticipantRoleSchema.parse(req.body ?? {});
+    const participant = await updateBattleParticipantRole({
+      battleId,
+      actingUserId: req.user.id,
+      targetUserId: payload.targetUserId,
+      role: payload.role,
+    });
+
+    res.json({ participant });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateContestantsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const payload = updateContestantsSchema.parse(req.body ?? {});
+    const contestants = await updateBattleContestants({
+      battleId,
+      actingUserId: req.user.id,
+      contestantUserIds: payload.contestantUserIds,
+    });
+
+    res.json({ contestants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createBattleInviteHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const invite = await createBattleInvite({ battleId, userId: req.user.id });
+    res.status(201).json({ invite });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listBattleInvitesHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const invites = await listBattleInvites(battleId, req.user.id);
+    res.json({ invites });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const revokeBattleInviteHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const { battleId } = battleIdParamSchema.parse(req.params);
+    const payload = revokeInviteSchema.parse(req.body ?? {});
+    const invite = await revokeBattleInvite({
+      battleId,
+      userId: req.user.id,
+      inviteId: payload.inviteId,
+    });
+
+    res.json({ invite });
   } catch (error) {
     next(error);
   }

@@ -9,8 +9,8 @@ export const createInitialDraft = (battleId: string): BattleConfigDraft => ({
   shortDescription: "",
   gameMode: undefined,
   difficulty: undefined,
-  maxPlayers: null,
-  privacy: "public",
+  maxContestants: 2,
+  visibility: "public",
   startMode: "manual",
   scheduledStartAt: null,
   allowSpectators: true,
@@ -31,26 +31,40 @@ export const createInitialDraft = (battleId: string): BattleConfigDraft => ({
   rematchDefaults: false,
   joinQueueSize: null,
   password: undefined,
+  passwordRequired: false,
   linkExpiry: undefined,
 });
 
 export const mapBattleToDraft = (battle: BattleRecord): BattleConfigDraft => {
-  const configuration = (battle.configuration ?? {}) as Partial<BattleConfigDraft>;
-  const problems = Array.isArray(configuration.problems)
-    ? (configuration.problems as BattleProblemSummary[])
+  const configuration = (battle.configuration ?? {}) as Record<string, unknown>;
+  const {
+    allowSpectators = true,
+    maxContestants,
+    visibility = "public",
+    passwordRequired = false,
+    ...extras
+  } = configuration;
+
+  const problems = Array.isArray(extras.problems)
+    ? (extras.problems as BattleProblemSummary[])
     : [];
 
   const status = (battle.status as BattleConfigStatus) ?? "draft";
 
   return {
     ...createInitialDraft(battle.id),
-    ...configuration,
+    ...(extras as Partial<BattleConfigDraft>),
     battleId: battle.id,
     name: battle.name,
     status,
     shortDescription: battle.shortDescription ?? "",
     startMode: battle.autoStart ? "scheduled" : "manual",
     scheduledStartAt: battle.scheduledStartAt,
+    allowSpectators: Boolean(allowSpectators),
+    maxContestants: typeof maxContestants === "number" ? maxContestants : null,
+    visibility: (visibility as BattleConfigDraft["visibility"]) ?? "public",
+    passwordRequired: Boolean(passwordRequired),
+    password: undefined,
     problems,
   };
 };
@@ -58,8 +72,8 @@ export const mapBattleToDraft = (battle: BattleRecord): BattleConfigDraft => {
 export const buildConfigurationPayload = (draft: BattleConfigDraft): Record<string, unknown> => ({
   gameMode: draft.gameMode,
   difficulty: draft.difficulty,
-  maxPlayers: draft.maxPlayers,
-  privacy: draft.privacy,
+  maxContestants: draft.maxContestants,
+  visibility: draft.visibility,
   allowSpectators: draft.allowSpectators,
   voiceChat: draft.voiceChat,
   teamBalancing: draft.teamBalancing,
@@ -77,7 +91,9 @@ export const buildConfigurationPayload = (draft: BattleConfigDraft): Record<stri
   preloadedResources: draft.preloadedResources,
   rematchDefaults: draft.rematchDefaults,
   joinQueueSize: draft.joinQueueSize,
-  password: draft.password,
+  ...(draft.visibility === "password" && draft.password
+    ? { password: draft.password }
+    : {}),
   linkExpiry: draft.linkExpiry,
 });
 

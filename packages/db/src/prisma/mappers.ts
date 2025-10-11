@@ -1,15 +1,19 @@
 import type {
   BattleParticipantRole,
   BattleParticipantStatus,
+  CreateBattleInvitePayload,
   CreateBattleParticipantPayload,
   CreateBattlePayload,
   CreateUserPayload,
+  DbBattleInviteRow,
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleInvitePayload,
   UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from '../types.js';
+import type { Prisma as PostgresPrisma } from '../generated/postgres/index.js';
 
 export type PrismaUserRecord = {
   id: string;
@@ -26,7 +30,7 @@ export type PrismaBattleRecord = {
   id: string;
   name: string;
   shortDescription: string | null;
-  status: DbBattleRow['status'];
+  status: string;
   configuration: unknown;
   autoStart: boolean;
   scheduledStartAt: Date | null;
@@ -43,7 +47,42 @@ export type PrismaBattleParticipantRecord = {
   status: string;
   createdAt: Date;
   acceptedAt: Date | null;
+  isContestant: boolean;
+  leftAt: Date | null;
 };
+
+export type PrismaBattleInviteRecord = {
+  id: string;
+  battleId: string;
+  token: string;
+  createdByUserId: string;
+  createdAt: Date;
+  revokedAt: Date | null;
+};
+
+const toPostgresBattleConfiguration = (
+  configuration: Record<string, unknown> | null | undefined,
+): PostgresPrisma.InputJsonValue => {
+  if (!configuration) {
+    return {} as PostgresPrisma.InputJsonObject;
+  }
+
+  return configuration as PostgresPrisma.InputJsonObject;
+};
+
+const BATTLE_STATUS_VALUES = new Set<DbBattleRow['status']>([
+  'draft',
+  'configuring',
+  'lobby',
+  'scheduled',
+  'ready',
+  'active',
+  'completed',
+  'cancelled',
+]);
+
+const isBattleStatus = (value: unknown): value is DbBattleRow['status'] =>
+  typeof value === 'string' && BATTLE_STATUS_VALUES.has(value as DbBattleRow['status']);
 
 const parseBattleConfiguration = (value: unknown): Record<string, unknown> => {
   if (value === null || value === undefined) {
@@ -85,7 +124,7 @@ export const mapBattle = (battle: PrismaBattleRecord): DbBattleRow => ({
   id: battle.id,
   name: battle.name,
   short_description: battle.shortDescription,
-  status: battle.status,
+  status: isBattleStatus(battle.status) ? battle.status : 'draft',
   configuration: parseBattleConfiguration(battle.configuration),
   auto_start: battle.autoStart,
   scheduled_start_at: battle.scheduledStartAt,
@@ -102,8 +141,19 @@ export const mapBattleParticipant = (
   user_id: participant.userId,
   role: participant.role as BattleParticipantRole,
   status: participant.status as BattleParticipantStatus,
+  is_contestant: participant.isContestant,
   created_at: participant.createdAt,
   accepted_at: participant.acceptedAt ?? null,
+  left_at: participant.leftAt ?? null,
+});
+
+export const mapBattleInvite = (invite: PrismaBattleInviteRecord): DbBattleInviteRow => ({
+  id: invite.id,
+  battle_id: invite.battleId,
+  token: invite.token,
+  created_by_user_id: invite.createdByUserId,
+  created_at: invite.createdAt,
+  revoked_at: invite.revokedAt ?? null,
 });
 
 export const toUserCreateData = (payload: CreateUserPayload) => ({
@@ -121,7 +171,7 @@ export const toBattleCreateData = (payload: CreateBattlePayload) => ({
   name: payload.name,
   shortDescription: payload.shortDescription ?? null,
   status: payload.status,
-  configuration: payload.configuration,
+  configuration: toPostgresBattleConfiguration(payload.configuration),
   autoStart: payload.autoStart,
   scheduledStartAt: payload.scheduledStartAt ?? null,
   startedAt: payload.startedAt ?? null,
@@ -148,7 +198,7 @@ export const toBattleUpdateData = (payload: UpdateBattlePayload) => {
   }
 
   if (payload.configuration !== undefined) {
-    data.configuration = payload.configuration;
+    data.configuration = toPostgresBattleConfiguration(payload.configuration);
   }
 
   if (payload.autoStart !== undefined) {
@@ -185,6 +235,8 @@ export const toBattleParticipantCreateData = (
   role: payload.role,
   status: payload.status ?? 'pending',
   acceptedAt: payload.acceptedAt ?? null,
+  isContestant: payload.isContestant ?? false,
+  leftAt: payload.leftAt ?? null,
 });
 
 export const toBattleParticipantUpdateData = (payload: UpdateBattleParticipantPayload) => {
@@ -200,6 +252,32 @@ export const toBattleParticipantUpdateData = (payload: UpdateBattleParticipantPa
 
   if (payload.acceptedAt !== undefined) {
     data.acceptedAt = payload.acceptedAt;
+  }
+
+  if (payload.isContestant !== undefined) {
+    data.isContestant = payload.isContestant;
+  }
+
+  if (payload.leftAt !== undefined) {
+    data.leftAt = payload.leftAt;
+  }
+
+  return data;
+};
+
+export const toBattleInviteCreateData = (payload: CreateBattleInvitePayload) => ({
+  id: payload.id,
+  battleId: payload.battleId,
+  token: payload.token,
+  createdByUserId: payload.createdByUserId,
+  revokedAt: payload.revokedAt ?? null,
+});
+
+export const toBattleInviteUpdateData = (payload: UpdateBattleInvitePayload) => {
+  const data: Record<string, unknown> = {};
+
+  if (payload.revokedAt !== undefined) {
+    data.revokedAt = payload.revokedAt;
   }
 
   return data;

@@ -2,8 +2,11 @@ import { PrismaClient } from "../generated/sqlite/index.js";
 import type { DatabaseClient, DatabaseKind } from "../databaseClient.js";
 import {
   mapBattle,
+  mapBattleInvite,
   mapBattleParticipant,
   mapUser,
+  toBattleInviteCreateData,
+  toBattleInviteUpdateData,
   toBattleParticipantCreateData,
   toBattleParticipantUpdateData,
   toSqliteBattleCreateData,
@@ -12,12 +15,15 @@ import {
 } from "./mappers.js";
 import type {
   BattleParticipantRole,
+  CreateBattleInvitePayload,
   CreateBattleParticipantPayload,
   CreateBattlePayload,
   CreateUserPayload,
+  DbBattleInviteRow,
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleInvitePayload,
   UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from "../types.js";
@@ -181,8 +187,38 @@ export class PrismaSqliteDatabase implements DatabaseClient {
     },
   };
 
+  public readonly battleInvites = {
+    insert: async (payload: CreateBattleInvitePayload): Promise<DbBattleInviteRow> => {
+      const created = await this.prisma.battleInvite.create({
+        data: toBattleInviteCreateData(payload),
+      });
+      return mapBattleInvite(created);
+    },
+
+    findByToken: async (token: string): Promise<DbBattleInviteRow | null> => {
+      const found = await this.prisma.battleInvite.findUnique({ where: { token } });
+      return found ? mapBattleInvite(found) : null;
+    },
+
+    listByBattle: async (battleId: string): Promise<DbBattleInviteRow[]> => {
+      const invites = await this.prisma.battleInvite.findMany({
+        where: { battleId },
+        orderBy: { createdAt: "desc" },
+      });
+      return invites.map(mapBattleInvite);
+    },
+
+    updateById: async (id: string, payload: UpdateBattleInvitePayload): Promise<DbBattleInviteRow> => {
+      const updated = await this.prisma.battleInvite.update({
+        where: { id },
+        data: toBattleInviteUpdateData(payload),
+      });
+      return mapBattleInvite(updated);
+    },
+  };
+
   public async runMigrations(): Promise<void> {
-    await this.prisma.$transaction(async (tx: PrismaClient) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
@@ -239,17 +275,93 @@ export class PrismaSqliteDatabase implements DatabaseClient {
         "CREATE INDEX IF NOT EXISTS idx_battles_scheduled_start ON battles (scheduled_start_at);",
       );
 
+      const participantColumns = await tx.$queryRawUnsafe<Array<{ name: string }>>(
+        "PRAGMA table_info('battle_participants');",
+      );
+
+      const hasContestantColumn = participantColumns.some((column) => column.name === 'is_contestant');
+
+      if (!hasContestantColumn) {
+        await tx.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS battle_participants_new (
+            id TEXT PRIMARY KEY,
+            battle_id TEXT NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL DEFAULT 'user',
+            status TEXT NOT NULL DEFAULT 'pending',
+            is_contestant INTEGER NOT NULL DEFAULT 0,
+            accepted_at DATETIME,
+            left_at DATETIME,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (role IN ('owner', 'admin', 'editor', 'user')),
+            CHECK (status IN ('pending', 'accepted', 'left')),
+            CHECK (is_contestant IN (0, 1)),
+            UNIQUE (battle_id, user_id)
+          );
+        `);
+
+        if (participantColumns.length > 0) {
+          const existingParticipants = await tx.$queryRawUnsafe<
+            Array<{
+              id: string;
+              battle_id: string;
+              user_id: string;
+              role: string;
+              status: string;
+              accepted_at: Date | null;
+              created_at: Date;
+            }>
+          >(`
+            SELECT id, battle_id, user_id, role, status, accepted_at, created_at
+            FROM battle_participants;
+          `);
+
+          for (const participant of existingParticipants) {
+            const normalizedRole = participant.role === 'player' ? 'user' : participant.role;
+            const normalizedStatus = participant.status === 'left' ? 'left' : participant.status;
+
+            await tx.$executeRawUnsafe(
+              `INSERT OR IGNORE INTO battle_participants_new (
+                id,
+                battle_id,
+                user_id,
+                role,
+                status,
+                accepted_at,
+                left_at,
+                created_at,
+                is_contestant
+              ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 0);`,
+              participant.id,
+              participant.battle_id,
+              participant.user_id,
+              normalizedRole,
+              normalizedStatus,
+              participant.accepted_at,
+              participant.created_at,
+            );
+          }
+
+          await tx.$executeRawUnsafe('DROP TABLE battle_participants;');
+        }
+
+        await tx.$executeRawUnsafe('ALTER TABLE battle_participants_new RENAME TO battle_participants;');
+      }
+
       await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS battle_participants (
           id TEXT PRIMARY KEY,
           battle_id TEXT NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
           user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          role TEXT NOT NULL DEFAULT 'player',
+          role TEXT NOT NULL DEFAULT 'user',
           status TEXT NOT NULL DEFAULT 'pending',
+          is_contestant INTEGER NOT NULL DEFAULT 0,
           accepted_at DATETIME,
+          left_at DATETIME,
           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CHECK (role IN ('owner', 'admin', 'editor', 'player')),
-          CHECK (status IN ('pending', 'accepted')),
+          CHECK (role IN ('owner', 'admin', 'editor', 'user')),
+          CHECK (status IN ('pending', 'accepted', 'left')),
+          CHECK (is_contestant IN (0, 1)),
           UNIQUE (battle_id, user_id)
         );
       `);
@@ -280,6 +392,21 @@ export class PrismaSqliteDatabase implements DatabaseClient {
 
       await tx.$executeRawUnsafe(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_participants_owner ON battle_participants (battle_id) WHERE role = 'owner';",
+      );
+
+      await tx.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS battle_invites (
+          id TEXT PRIMARY KEY,
+          battle_id TEXT NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+          token TEXT NOT NULL UNIQUE,
+          created_by_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          revoked_at DATETIME
+        );
+      `);
+
+      await tx.$executeRawUnsafe(
+        "CREATE INDEX IF NOT EXISTS idx_battle_invites_battle_id ON battle_invites (battle_id);",
       );
     });
   }

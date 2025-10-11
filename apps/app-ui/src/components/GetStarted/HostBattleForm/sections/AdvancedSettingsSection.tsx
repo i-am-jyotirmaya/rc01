@@ -2,7 +2,10 @@ import { Col, Form, InputNumber, Input, Row, Select, Space, Switch, Typography }
 import type { FormInstance } from "antd";
 import type { FC } from "react";
 import { advancedSelectOptions, advancedColProps } from "../formOptions";
-import type { HostBattleFormValues, PrivacySetting } from "../../../../features/hostBattle/types";
+import type {
+  HostBattleFormValues,
+  VisibilitySetting,
+} from "../../../../features/hostBattle/types";
 
 interface AdvancedSettingsSectionProps {
   form: FormInstance<HostBattleFormValues>;
@@ -110,12 +113,16 @@ export const AdvancedSettingsSection: FC<AdvancedSettingsSectionProps> = ({ form
         <Col {...advancedColProps}>
           <Form.Item shouldUpdate noStyle>
             {() => {
-              const privacy = form.getFieldValue("privacy") as PrivacySetting;
+              const visibility = form.getFieldValue("visibility") as VisibilitySetting;
               return (
                 <Form.Item name="password" label="Password">
                   <Input.Password
-                    placeholder={privacy === "invite" ? "Share a secure password" : "Invite only required"}
-                    disabled={privacy !== "invite"}
+                    placeholder={
+                      visibility === "password"
+                        ? "Share a secure password"
+                        : "Password only required for password battles"
+                    }
+                    disabled={visibility !== "password"}
                     allowClear
                   />
                 </Form.Item>

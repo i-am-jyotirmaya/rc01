@@ -638,14 +638,14 @@ export const HostBattlePage: FC = () => {
             </Paragraph>
             <Space size={[token.marginSM, token.marginSM]} wrap>
               <Tag style={tagStyle}>Real-time control</Tag>
-              <Tag style={tagStyle}>Private or public</Tag>
+              <Tag style={tagStyle}>Visibility controls</Tag>
               <Tag style={tagStyle}>Power-up pools</Tag>
             </Space>
             <Divider style={{ margin: `${token.marginMD}px 0`, borderColor: palette.dividerColor }} />
             <Paragraph strong style={{ margin: 0, color: palette.headingColor }}>Setup checklist</Paragraph>
             <ul style={highlightListStyle}>
-              <li>Pick battle modes, difficulty, and player limits that match your format.</li>
-              <li>Lock down privacy, queue sizing, and moderation so teams join smoothly.</li>
+              <li>Pick battle modes, difficulty, and contestant limits that match your format.</li>
+              <li>Lock down visibility, queue sizing, and moderation so teams join smoothly.</li>
               <li>Enable advanced scoring, power-ups, and resources when you want extra spectacle.</li>
             </ul>
             <Paragraph style={{ margin: 0, color: palette.paragraphMutedColor }}>

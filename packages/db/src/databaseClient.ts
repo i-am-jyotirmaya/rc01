@@ -1,11 +1,14 @@
 import type {
   BattleParticipantRole,
+  CreateBattleInvitePayload,
   CreateBattleParticipantPayload,
   CreateBattlePayload,
   CreateUserPayload,
+  DbBattleInviteRow,
   DbBattleParticipantRow,
   DbBattleRow,
   DbUserRow,
+  UpdateBattleInvitePayload,
   UpdateBattleParticipantPayload,
   UpdateBattlePayload,
 } from './types.js';
@@ -35,11 +38,19 @@ export interface BattleParticipantsRepository {
   updateById(id: string, payload: UpdateBattleParticipantPayload): Promise<DbBattleParticipantRow>;
 }
 
+export interface BattleInvitesRepository {
+  insert(payload: CreateBattleInvitePayload): Promise<DbBattleInviteRow>;
+  findByToken(token: string): Promise<DbBattleInviteRow | null>;
+  listByBattle(battleId: string): Promise<DbBattleInviteRow[]>;
+  updateById(id: string, payload: UpdateBattleInvitePayload): Promise<DbBattleInviteRow>;
+}
+
 export interface DatabaseClient {
   readonly kind: DatabaseKind;
   readonly users: UsersRepository;
   readonly battles: BattlesRepository;
   readonly battleParticipants: BattleParticipantsRepository;
+  readonly battleInvites: BattleInvitesRepository;
   runMigrations(): Promise<void>;
   disconnect(): Promise<void>;
 }

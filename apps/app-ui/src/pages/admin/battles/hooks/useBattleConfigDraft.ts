@@ -31,8 +31,8 @@ type DraftUpdate = Partial<
       | "shortDescription"
       | "gameMode"
       | "difficulty"
-      | "maxPlayers"
-      | "privacy"
+      | "maxContestants"
+      | "visibility"
       | "startMode"
       | "scheduledStartAt"
       | "allowSpectators"
@@ -52,6 +52,7 @@ type DraftUpdate = Partial<
       | "rematchDefaults"
       | "joinQueueSize"
       | "password"
+      | "passwordRequired"
       | "linkExpiry"
   >
 > & { status?: BattleConfigDraft["status"] };

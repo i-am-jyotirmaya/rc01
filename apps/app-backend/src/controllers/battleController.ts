@@ -111,7 +111,7 @@ const parseStartDate = (value: string | null | undefined): Date | null | undefin
 
 export const listBattlesHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const battles = await getBattles();
+    const battles = await getBattles(req.user?.id);
     res.json({ battles });
   } catch (error) {
     next(error);
@@ -121,7 +121,7 @@ export const listBattlesHandler = async (req: Request, res: Response, next: Next
 export const getBattleHandler = async (req: Request<{ battleId: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { battleId } = battleIdParamSchema.parse(req.params);
-    const battle = await getBattleById(battleId);
+    const battle = await getBattleById(battleId, req.user?.id);
     res.json({ battle });
   } catch (error) {
     next(error);
@@ -154,10 +154,15 @@ export const createBattleHandler = async (req: Request, res: Response, next: Nex
 
 export const updateBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
     const payload = updateBattleSchema.parse(req.body);
     const startDate = parseStartDate(payload.scheduledStartAt ?? undefined);
 
     const battle = await updateBattle(req.params.battleId, {
+      actingUserId: req.user.id,
       name: payload.name,
       shortDescription: payload.shortDescription ?? undefined,
       configuration: payload.configuration,
@@ -174,7 +179,14 @@ export const updateBattleHandler = async (req: Request, res: Response, next: Nex
 
 export const startBattleHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const battle = await startBattle(req.params.battleId);
+    if (!req.user) {
+      throw createHttpError(401, 'Authentication required');
+    }
+
+    const battle = await startBattle({
+      battleId: req.params.battleId,
+      actingUserId: req.user.id,
+    });
     res.json({ battle });
   } catch (error) {
     next(error);

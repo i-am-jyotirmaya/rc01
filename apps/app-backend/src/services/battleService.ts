@@ -48,6 +48,8 @@ export type BattleRecord = {
   startedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  viewerRole?: BattleParticipantRole;
+  viewerPermissions?: BattlePermission[];
 };
 
 export type BattleParticipantRecord = {
@@ -105,8 +107,19 @@ export type CreateBattleInput = {
   createdByUserId: string;
 };
 
-export type UpdateBattleInput = Partial<CreateBattleInput> & {
+export type UpdateBattleInput = {
+  actingUserId: string;
+  name?: string;
+  shortDescription?: string | null;
+  configuration?: Record<string, unknown>;
+  startMode?: BattleStartMode;
+  scheduledStartAt?: Date | null;
   status?: BattleStatus;
+};
+
+export type StartBattleInput = {
+  battleId: string;
+  actingUserId?: string;
 };
 
 export type JoinBattleInput = {
@@ -205,6 +218,20 @@ export const battleRoleCapabilities: Readonly<Record<BattleParticipantRole, read
 
 const getPermissionsForRole = (role: BattleParticipantRole): BattlePermission[] => {
   return Array.from(ROLE_PERMISSIONS[role] ?? []);
+};
+
+const roleHasPermission = (role: BattleParticipantRole, permission: BattlePermission): boolean => {
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+};
+
+const assertParticipantPermission = (
+  participant: DbBattleParticipantRow,
+  permission: BattlePermission,
+  errorMessage: string,
+): void => {
+  if (!roleHasPermission(participant.role, permission)) {
+    throw createHttpError(403, errorMessage);
+  }
 };
 
 export const getBattleRolePermissions = (role: BattleParticipantRole): BattlePermission[] =>
@@ -408,7 +435,7 @@ const assertBattleNotLocked = (battle: DbBattleRow): void => {
   }
 };
 
-const toBattleRecord = (row: DbBattleRow): BattleRecord => {
+const toBattleRecord = (row: DbBattleRow, viewer?: DbBattleParticipantRow | null): BattleRecord => {
   const persistedConfig = sanitizePersistedConfiguration(row.configuration);
 
   return {
@@ -422,6 +449,8 @@ const toBattleRecord = (row: DbBattleRow): BattleRecord => {
     startedAt: row.started_at ? row.started_at.toISOString() : null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    viewerRole: viewer?.role,
+    viewerPermissions: viewer ? getPermissionsForRole(viewer.role) : undefined,
   };
 };
 
@@ -595,25 +624,38 @@ const determineUpdatePlan = (
 export const initializeBattleScheduling = async (): Promise<void> => {
   await scheduler.restore(async (battleId) => {
     try {
-      await startBattle(battleId);
+      await startBattle({ battleId });
     } catch (error) {
       logger.error(`Failed to auto-start battle ${battleId}`, error);
     }
   });
 };
 
-export const getBattles = async (): Promise<BattleRecord[]> => {
+export const getBattles = async (viewerId?: string): Promise<BattleRecord[]> => {
   const rows = await listBattles();
-  return rows.map(toBattleRecord);
+  if (!viewerId) {
+    return rows.map((row) => toBattleRecord(row));
+  }
+
+  const records = await Promise.all(
+    rows.map(async (row) => {
+      const participant = await findBattleParticipant(row.id, viewerId);
+      return toBattleRecord(row, participant);
+    }),
+  );
+
+  return records;
 };
 
-export const getBattleById = async (id: string): Promise<BattleRecord> => {
+export const getBattleById = async (id: string, viewerId?: string): Promise<BattleRecord> => {
   const row = await findBattleById(id);
   if (!row) {
     throw createHttpError(404, 'Battle not found');
   }
 
-  return toBattleRecord(row);
+  const participant = viewerId ? await findBattleParticipant(id, viewerId) : null;
+
+  return toBattleRecord(row, participant);
 };
 
 export const listBattleParticipants = async (
@@ -671,10 +713,10 @@ export const createBattle = async (input: CreateBattleInput): Promise<BattleReco
   });
 
   if (created.auto_start && created.scheduled_start_at) {
-    scheduler.schedule(created, (battleIdToStart) => startBattle(battleIdToStart));
+    scheduler.schedule(created, (battleIdToStart) => startBattle({ battleId: battleIdToStart }));
   }
 
-  return toBattleRecord(created);
+  return toBattleRecord(created, ownerParticipant);
 };
 
 export const updateBattle = async (id: string, input: UpdateBattleInput): Promise<BattleRecord> => {
@@ -682,6 +724,19 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
   if (!existing) {
     throw createHttpError(404, 'Battle not found');
   }
+
+  const actingParticipant = await requireAcceptedParticipant(
+    id,
+    input.actingUserId,
+    403,
+    'You must join the battle before configuring it',
+  );
+
+  assertParticipantPermission(
+    actingParticipant,
+    'battle.configure',
+    'You do not have permission to configure this battle',
+  );
 
   if (!CONFIGURABLE_STATUSES.includes(existing.status)) {
     throw createHttpError(409, `Battles in status "${existing.status}" cannot be configured`);
@@ -744,12 +799,12 @@ export const updateBattle = async (id: string, input: UpdateBattleInput): Promis
   }
 
   if (updated.auto_start && updated.scheduled_start_at) {
-    scheduler.schedule(updated, (battleIdToStart) => startBattle(battleIdToStart));
+    scheduler.schedule(updated, (battleIdToStart) => startBattle({ battleId: battleIdToStart }));
   } else {
     scheduler.cancel(id);
   }
 
-  const record = toBattleRecord(updated);
+  const record = toBattleRecord(updated, actingParticipant);
 
   if (existing.status !== record.status) {
     battleEvents.emit('battle.status-changed', { battleId: id, status: record.status });
@@ -1162,19 +1217,38 @@ export const inviteBattleParticipant = async (
   return toBattleParticipantRecord(created);
 };
 
-export const startBattle = async (id: string): Promise<BattleRecord> => {
-  const existing = await findBattleById(id);
+export const startBattle = async (input: StartBattleInput): Promise<BattleRecord> => {
+  const { battleId, actingUserId } = input;
+
+  const existing = await findBattleById(battleId);
   if (!existing) {
     throw createHttpError(404, 'Battle not found');
+  }
+
+  let actingParticipant: DbBattleParticipantRow | null = null;
+
+  if (actingUserId) {
+    actingParticipant = await requireAcceptedParticipant(
+      battleId,
+      actingUserId,
+      403,
+      'You must join the battle before starting it',
+    );
+
+    assertParticipantPermission(
+      actingParticipant,
+      'battle.start',
+      'You do not have permission to start this battle',
+    );
   }
 
   if (existing.status !== 'ready' && existing.status !== 'scheduled' && existing.status !== 'lobby') {
     throw createHttpError(409, `Battle cannot be started from status "${existing.status}"`);
   }
 
-  scheduler.cancel(id);
+  scheduler.cancel(battleId);
 
-  const updated = await updateBattleById(id, {
+  const updated = await updateBattleById(battleId, {
     status: 'active',
     autoStart: false,
     scheduledStartAt: null,
@@ -1185,8 +1259,8 @@ export const startBattle = async (id: string): Promise<BattleRecord> => {
     throw createHttpError(404, 'Battle not found');
   }
 
-  const record = toBattleRecord(updated);
-  battleEvents.emit('battle.status-changed', { battleId: id, status: record.status });
+  const record = toBattleRecord(updated, actingParticipant);
+  battleEvents.emit('battle.status-changed', { battleId, status: record.status });
   return record;
 };
 

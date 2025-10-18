@@ -16,7 +16,7 @@ export class ApiError extends Error {
 export class ApiClient {
   private baseUrl?: string;
   private readonly fetchFn?: typeof fetch;
-  private readonly defaultHeaders: HeadersInit;
+  private readonly defaultHeaders: Headers;
 
   constructor(options?: ApiClientOptions) {
     this.baseUrl = options?.baseUrl
@@ -25,9 +25,11 @@ export class ApiClient {
     this.fetchFn =
       options?.fetchFn ??
       (typeof fetch === "function" ? fetch.bind(globalThis) : undefined);
-    this.defaultHeaders = options?.defaultHeaders ?? {
-      "Content-Type": "application/json",
-    };
+    this.defaultHeaders = new Headers(
+      options?.defaultHeaders ?? {
+        "Content-Type": "application/json",
+      },
+    );
   }
 
   setBaseUrl(baseUrl?: string): void {
@@ -46,6 +48,20 @@ export class ApiClient {
     const normalizedPath = path.startsWith("/") ? path : "/" + path;
     const base = this.baseUrl ?? "";
     return base + normalizedPath;
+  }
+
+  setDefaultHeader(name: string, value?: string | null): void {
+    const headerName = typeof name === "string" ? name.trim() : "";
+    if (!headerName) {
+      return;
+    }
+
+    if (value === undefined || value === null || value === "") {
+      this.defaultHeaders.delete(headerName);
+      return;
+    }
+
+    this.defaultHeaders.set(headerName, value);
   }
 
   private mergeHeaders(override?: HeadersInit): Headers {
@@ -314,6 +330,8 @@ export interface BattleRecord {
   startedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  viewerRole?: BattleParticipantRole;
+  viewerPermissions?: BattlePermission[];
 }
 
 export type BattleParticipantRole = 'owner' | 'admin' | 'editor' | 'user';
